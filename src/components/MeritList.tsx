@@ -227,45 +227,46 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
     <Layout title="Merit List">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900 flex-shrink-0"
             >
-              <ArrowLeft className="h-5 w-5" />
-              <span>Back to Dashboard</span>
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="sm:hidden">Back</span>
             </button>
-            <div className="h-6 border-l border-gray-300"></div>
-            <div className="flex items-center space-x-2">
-              <Trophy className="h-5 w-5 text-purple-600" />
-              <h1 className="text-2xl font-bold text-gray-900">Merit List</h1>
+            <div className="h-4 sm:h-6 border-l border-gray-300 hidden sm:block"></div>
+            <div className="flex items-center space-x-2 min-w-0">
+              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 flex-shrink-0" />
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Merit List</h1>
             </div>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <button
               onClick={exportToPDF}
               disabled={filteredList.length === 0}
-              className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center space-x-1 sm:space-x-2 bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               <Download className="h-4 w-4" />
-              <span>PDF</span>
+              <span className="hidden sm:inline">PDF</span>
             </button>
             <button
               onClick={exportToExcel}
               disabled={filteredList.length === 0}
-              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center space-x-1 sm:space-x-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               <Download className="h-4 w-4" />
-              <span>Excel</span>
+              <span className="hidden sm:inline">Excel</span>
             </button>
           </div>
         </div>
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -273,7 +274,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
                 placeholder="Search students..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
             
@@ -282,7 +283,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               <select
                 value={selectedSemester}
                 onChange={(e) => setSelectedSemester(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="">All Semesters</option>
                 {semesters.map(semester => (
@@ -296,7 +297,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               placeholder="Min %"
               value={minPercentage}
               onChange={(e) => setMinPercentage(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
             
             <input
@@ -304,7 +305,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               placeholder="Max %"
               value={maxPercentage}
               onChange={(e) => setMaxPercentage(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
             
             <button
@@ -314,7 +315,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
                 setMinPercentage('');
                 setMaxPercentage('');
               }}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="w-full px-4 py-2 text-sm sm:text-base border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Clear Filters
             </button>
@@ -344,19 +345,19 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Rank
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Student Details
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Academic Info
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Marks
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Percentage
                     </th>
                   </tr>
@@ -364,14 +365,14 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredList.map((entry) => (
                     <tr key={entry.student.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4">
                         <div className="flex items-center space-x-2">
                           {getRankIcon(entry.rank)}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 truncate">
                             {entry.student.name}
                           </div>
                           <div className="text-sm text-gray-500">
@@ -379,20 +380,25 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="hidden sm:table-cell px-6 py-4">
                         <div className="text-sm text-gray-900">{entry.student.semester}</div>
                         <div className="text-sm text-gray-500">Batch: {entry.student.batch}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
                           {entry.total_marks} / {entry.max_marks}
                         </div>
                         <div className="text-sm text-gray-500">
                           {entry.subjects.length} subjects
                         </div>
+                        {/* Show academic info on mobile */}
+                        <div className="sm:hidden mt-2 text-xs text-gray-500">
+                          <div>{entry.student.semester}</div>
+                          <div>Batch: {entry.student.batch}</div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getPercentageColor(entry.percentage)}`}>
+                      <td className="px-3 sm:px-6 py-4">
+                        <span className={`inline-flex px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getPercentageColor(entry.percentage)}`}>
                           {entry.percentage.toFixed(2)}%
                         </span>
                       </td>
@@ -408,7 +414,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
         {filteredList.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Top Performers</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredList.slice(0, 3).map((entry, index) => (
                 <div
                   key={entry.student.id}

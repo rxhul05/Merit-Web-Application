@@ -169,24 +169,25 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
     <Layout title="Marks Entry">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900 flex-shrink-0"
             >
-              <ArrowLeft className="h-5 w-5" />
-              <span>Back to Dashboard</span>
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="sm:hidden">Back</span>
             </button>
-            <div className="h-6 border-l border-gray-300"></div>
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-5 w-5 text-green-600" />
-              <h1 className="text-2xl font-bold text-gray-900">Marks Entry</h1>
+            <div className="h-4 sm:h-6 border-l border-gray-300 hidden sm:block"></div>
+            <div className="flex items-center space-x-2 min-w-0">
+              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Marks Entry</h1>
             </div>
           </div>
           <button
             onClick={() => setShowSubjectForm(true)}
-            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center space-x-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto justify-center sm:justify-start"
           >
             <Plus className="h-4 w-4" />
             <span>Add Subject</span>
@@ -206,7 +207,7 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
               </button>
             </div>
 
-            <form onSubmit={handleSubjectSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubjectSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Subject Name *
@@ -261,17 +262,17 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
                 />
               </div>
 
-              <div className="md:col-span-2 flex justify-end space-x-3">
+              <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
                 <button
                   type="button"
                   onClick={() => setShowSubjectForm(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Save className="h-4 w-4" />
                   <span>Save Subject</span>
@@ -287,7 +288,7 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Select Student</h2>
             
             {/* Search and Filter */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -295,15 +296,15 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
                   placeholder="Search students..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 />
               </div>
-              <div className="relative">
+              <div className="relative w-full sm:w-auto sm:min-w-48">
                 <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <select
                   value={selectedSemester}
                   onChange={(e) => setSelectedSemester(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 >
                   <option value="">All Semesters</option>
                   {semesters.map(semester => (
@@ -314,7 +315,7 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
             </div>
 
             {/* Students Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {getFilteredStudents().map(student => (
                 <button
                   key={student.id}
@@ -365,7 +366,7 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {getSubjectsForSemester(selectedStudent.semester).map(subject => (
                       <div key={subject.id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-center mb-2">
@@ -388,20 +389,20 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
                     ))}
                   </div>
 
-                  <div className="flex justify-end space-x-3 pt-4">
+                  <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
                     <button
                       type="button"
                       onClick={() => {
                         setSelectedStudent(null);
                         setMarksData({});
                       }}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                       <Save className="h-4 w-4" />
                       <span>Save Marks</span>
