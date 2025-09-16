@@ -1,8 +1,8 @@
 # 🎓 Merit List Management System
 
-A modern, responsive web application for managing student records, marks entry, and generating merit lists. Built with React, TypeScript, and Supabase.
+A modern, responsive web application for managing student records, marks entry, and generating merit lists. Built with React, TypeScript, Vite, and Supabase.
 
-![Merit List System](https://img.shields.io/badge/React-18.3.1-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-blue) ![Supabase](https://img.shields.io/badge/Supabase-2.57.4-green) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4.1-blue)
+![Merit List System](https://img.shields.io/badge/React-18.3.1-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-blue) ![Vite](https://img.shields.io/badge/Vite-5.4.2-purple) ![Supabase](https://img.shields.io/badge/Supabase-2.57.4-green) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4.1-blue)
 
 ## ✨ Features
 
@@ -24,9 +24,12 @@ A modern, responsive web application for managing student records, marks entry, 
 ### 🔧 Technical Features
 - **TypeScript**: Full type safety and better development experience
 - **React Router**: Client-side routing for seamless navigation
+- **Vite**: Fast build tool and development server
 - **Supabase Integration**: Real-time database with authentication
 - **Error Boundaries**: React error boundaries for better error handling
 - **Custom Hooks**: Reusable logic for authentication and data management
+- **Toast Notifications**: Real-time user feedback system
+- **Responsive Design**: Mobile-first approach with Tailwind CSS
 
 ## 🚀 Quick Start
 
@@ -60,9 +63,17 @@ A modern, responsive web application for managing student records, marks entry, 
 4. **Set up Supabase database**
    Run the SQL migrations in the `supabase/migrations/` directory:
    ```sql
-   -- Create tables for students, subjects, marks, and admin users
-   -- (See supabase/migrations/ for complete SQL)
+   -- Migration 1: Create tables and RLS policies
+   -- Migration 2: Insert sample data for testing
+   -- Migration 3: Admin user setup instructions
    ```
+   
+   The migrations will create:
+   - `students` table with RLS policies
+   - `subjects` table with RLS policies  
+   - `marks` table with RLS policies
+   - Sample data for testing (10 students, 10 subjects, random marks)
+   - Performance indexes for optimal query performance
 
 5. **Start the development server**
    ```bash
@@ -73,6 +84,21 @@ A modern, responsive web application for managing student records, marks entry, 
 
 6. **Open your browser**
    Navigate to `http://localhost:5173`
+   
+   **Default Admin Credentials:**
+   - Email: `admin@merit.com`
+   - Password: `admin123`
+
+## 📊 Sample Data
+
+The application comes with pre-loaded sample data for testing:
+
+- **10 Students** across 2 semesters (5 per semester)
+- **10 Subjects** (5 per semester)
+- **Random Marks** (60-98 range) for all student-subject combinations
+- **Two Batches**: 2024-2025 and 2023-2024
+
+This allows you to immediately test all features without manual data entry.
 
 ## 🗄️ Database Schema
 
@@ -107,24 +133,19 @@ A modern, responsive web application for managing student records, marks entry, 
 
 ## 🔐 Authentication
 
-The system uses Supabase Auth for authentication. To set up:
+The system uses Supabase Auth for authentication. The database migrations automatically set up Row Level Security (RLS) policies.
+
+### Admin User Setup
 
 1. **Create an admin user** in Supabase Dashboard:
    - Go to Authentication → Users
    - Click "Create New User"
    - Use email: `admin@merit.com` and password: `admin123`
 
-2. **Set up Row Level Security (RLS)** policies in Supabase:
-   ```sql
-   -- Enable RLS on all tables
-   ALTER TABLE students ENABLE ROW LEVEL SECURITY;
-   ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
-   ALTER TABLE marks ENABLE ROW LEVEL SECURITY;
-   
-   -- Create policies for authenticated users
-   CREATE POLICY "Allow all operations for authenticated users" ON students
-   FOR ALL USING (auth.role() = 'authenticated');
-   ```
+2. **RLS Policies** are automatically created by the migrations:
+   - All tables have RLS enabled
+   - Authenticated users can perform all CRUD operations
+   - Policies are set for `students`, `subjects`, and `marks` tables
 
 ## 📱 Usage Guide
 
@@ -157,24 +178,37 @@ The system uses Supabase Auth for authentication. To set up:
 
 ### Project Structure
 ```
-src/
-├── components/          # React components
-│   ├── Dashboard.tsx    # Main dashboard
-│   ├── Login.tsx        # Authentication
-│   ├── Layout.tsx       # App layout wrapper
-│   ├── StudentManagement.tsx
-│   ├── MarksEntry.tsx
-│   ├── MeritList.tsx
-│   ├── Toast.tsx        # Notification system
-│   ├── ErrorBoundary.tsx
-│   └── LoadingSpinner.tsx
-├── contexts/            # React contexts
-│   └── AuthContext.tsx  # Authentication context
-├── lib/                 # Utilities
-│   └── supabase.ts      # Supabase client
-├── types/               # TypeScript types
-│   └── index.ts
-└── App.tsx              # Main app component
+merit-list-management-system/
+├── src/
+│   ├── components/          # React components
+│   │   ├── Dashboard.tsx    # Main dashboard
+│   │   ├── Login.tsx        # Authentication
+│   │   ├── Layout.tsx       # App layout wrapper
+│   │   ├── StudentManagement.tsx
+│   │   ├── MarksEntry.tsx
+│   │   ├── MeritList.tsx
+│   │   ├── Toast.tsx        # Notification system
+│   │   ├── ErrorBoundary.tsx
+│   │   └── LoadingSpinner.tsx
+│   ├── contexts/            # React contexts
+│   │   └── AuthContext.tsx  # Authentication context
+│   ├── lib/                 # Utilities
+│   │   └── supabase.ts      # Supabase client
+│   ├── types/               # TypeScript types
+│   │   └── index.ts
+│   ├── App.tsx              # Main app component
+│   ├── main.tsx             # Application entry point
+│   └── index.css            # Global styles
+├── supabase/
+│   └── migrations/          # Database migrations
+│       ├── 20250913164239_dawn_fire.sql    # Tables & RLS
+│       ├── 20250913164251_mellow_tree.sql  # Sample data
+│       └── 20250913164457_raspy_paper.sql  # Admin setup
+├── public/                  # Static assets
+├── package.json
+├── vite.config.ts
+├── tailwind.config.js
+└── tsconfig.json
 ```
 
 ### Available Scripts
@@ -195,12 +229,13 @@ npm run lint         # Run ESLint
 
 - **React 18.3.1**: UI library
 - **TypeScript 5.5.3**: Type safety
+- **Vite 5.4.2**: Build tool and dev server
 - **Supabase 2.57.4**: Backend and authentication
 - **React Router 7.9.1**: Client-side routing
 - **Tailwind CSS 3.4.1**: Styling
-- **Lucide React**: Icons
-- **jsPDF**: PDF generation
-- **XLSX**: Excel export
+- **Lucide React 0.544.0**: Icons
+- **jsPDF 3.0.2**: PDF generation
+- **XLSX 0.18.5**: Excel export
 
 ## 🎨 Customization
 
@@ -215,8 +250,9 @@ The app uses Tailwind CSS with custom animations and components. Key customizati
 ### Adding New Features
 1. Create new components in `src/components/`
 2. Add types in `src/types/index.ts`
-3. Update the database schema if needed
+3. Update the database schema if needed (create new migration)
 4. Add new routes in `App.tsx`
+5. Update the Supabase client if new tables are added
 
 ## 🐛 Troubleshooting
 
@@ -233,9 +269,10 @@ The app uses Tailwind CSS with custom animations and components. Key customizati
    - Clear browser cache and cookies
 
 3. **Database Errors**
-   - Run all migration files in order
-   - Check table permissions
+   - Run all migration files in order (dawn_fire → mellow_tree → raspy_paper)
+   - Check table permissions and RLS policies
    - Verify foreign key relationships
+   - Ensure sample data was inserted correctly
 
 ### Getting Help
 
@@ -264,4 +301,4 @@ For support and questions:
 
 ---
 
-**Built with ❤️ using React, TypeScript, and Supabase**
+**Built with ❤️ using React, TypeScript, Vite, and Supabase**
