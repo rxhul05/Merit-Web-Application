@@ -82,14 +82,6 @@ const Login: React.FC = () => {
               {loading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-gray-100">
-            <p className="text-sm text-gray-600 text-center">
-              <strong>Setup Required:</strong> Create admin user in Supabase Dashboard<br/>
-              <span className="text-xs">Authentication → Users → Create New User</span><br/>
-              <span className="text-xs">Email: admin@merit.com | Password: admin123</span>
-            </p>
-          </div>
         </div>
       </div>
     </div>

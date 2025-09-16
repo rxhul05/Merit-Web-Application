@@ -58,7 +58,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 const ToastContainer: React.FC<{ toasts: Toast[]; onHide: (id: string) => void }> = ({ toasts, onHide }) => {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className="fixed top-4 right-4 z-50 space-y-3 pointer-events-none">
       {toasts.map(toast => (
         <ToastItem key={toast.id} toast={toast} onHide={onHide} />
       ))}
@@ -67,54 +67,102 @@ const ToastContainer: React.FC<{ toasts: Toast[]; onHide: (id: string) => void }
 };
 
 const ToastItem: React.FC<{ toast: Toast; onHide: (id: string) => void }> = ({ toast, onHide }) => {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   const getIcon = () => {
     switch (toast.type) {
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'error':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
+        return <AlertCircle className="h-5 w-5 text-red-600" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+        return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
       case 'info':
-        return <Info className="h-5 w-5 text-blue-500" />;
+        return <Info className="h-5 w-5 text-blue-600" />;
     }
   };
 
   const getStyles = () => {
     switch (toast.type) {
       case 'success':
-        return 'bg-green-50 border-green-200 text-green-800';
+        return 'bg-white/70 backdrop-blur border-green-200 text-green-900';
       case 'error':
-        return 'bg-red-50 border-red-200 text-red-800';
+        return 'bg-white/70 backdrop-blur border-red-200 text-red-900';
       case 'warning':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+        return 'bg-white/70 backdrop-blur border-yellow-200 text-yellow-900';
       case 'info':
-        return 'bg-blue-50 border-blue-200 text-blue-800';
+        return 'bg-white/70 backdrop-blur border-blue-200 text-blue-900';
+    }
+  };
+
+  const getAccent = () => {
+    switch (toast.type) {
+      case 'success':
+        return 'from-green-500/90 to-emerald-500/90';
+      case 'error':
+        return 'from-red-500/90 to-rose-500/90';
+      case 'warning':
+        return 'from-amber-500/90 to-yellow-500/90';
+      case 'info':
+        return 'from-blue-500/90 to-cyan-500/90';
+    }
+  };
+
+  const getIconBg = () => {
+    switch (toast.type) {
+      case 'success':
+        return 'bg-green-50 text-green-700 ring-green-200';
+      case 'error':
+        return 'bg-red-50 text-red-700 ring-red-200';
+      case 'warning':
+        return 'bg-amber-50 text-amber-700 ring-amber-200';
+      case 'info':
+        return 'bg-blue-50 text-blue-700 ring-blue-200';
     }
   };
 
   return (
-    <div
-      className={`max-w-sm w-full bg-white shadow-lg rounded-lg border-l-4 p-4 transform transition-all duration-300 ease-in-out ${getStyles()}`}
-    >
-      <div className="flex items-start">
-        <div className="flex-shrink-0">
-          {getIcon()}
+    <div className={`relative max-w-sm w-[22rem] pointer-events-auto select-none transition-all duration-300 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
+      <div
+        className={`relative overflow-hidden rounded-xl border shadow-lg shadow-black/5 ${getStyles()}`}
+      >
+        <div className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${getAccent()}`} />
+
+        <div className="p-4">
+          <div className="flex items-start gap-3">
+            <div className={`flex h-9 w-9 items-center justify-center rounded-full ring-1 ${getIconBg()}`}>
+              {getIcon()}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-5 truncate">{toast.title}</p>
+              {toast.message && (
+                <p className="mt-1 text-sm leading-5 text-black/70 line-clamp-3">{toast.message}</p>
+              )}
+            </div>
+
+            <button
+              className="ml-2 rounded-md p-1 text-black/50 hover:text-black/70 hover:bg-black/5 transition-colors"
+              onClick={() => onHide(toast.id)}
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <div className="ml-3 w-0 flex-1">
-          <p className="text-sm font-medium">{toast.title}</p>
-          {toast.message && (
-            <p className="mt-1 text-sm opacity-90">{toast.message}</p>
-          )}
-        </div>
-        <div className="ml-4 flex-shrink-0 flex">
-          <button
-            className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none"
-            onClick={() => onHide(toast.id)}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+
+        {toast.duration && toast.duration > 0 && (
+          <div className="h-1 bg-black/5">
+            <div
+              className={`h-full bg-gradient-to-r ${getAccent()}`}
+              style={{ width: mounted ? '0%' : '100%', transition: `width ${toast.duration}ms linear` }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
