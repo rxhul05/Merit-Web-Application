@@ -58,7 +58,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 const ToastContainer: React.FC<{ toasts: Toast[]; onHide: (id: string) => void }> = ({ toasts, onHide }) => {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-3 pointer-events-none">
+    <div
+      className="fixed z-50 pointer-events-none flex flex-col gap-2 sm:gap-3 inset-x-2 top-2 sm:inset-auto sm:top-4 sm:right-4"
+      role="region"
+      aria-live="polite"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
       {toasts.map(toast => (
         <ToastItem key={toast.id} toast={toast} onHide={onHide} />
       ))}
@@ -126,7 +131,7 @@ const ToastItem: React.FC<{ toast: Toast; onHide: (id: string) => void }> = ({ t
   };
 
   return (
-    <div className={`relative max-w-sm w-[22rem] pointer-events-auto select-none transition-all duration-300 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
+    <div className={`relative w-full sm:max-w-sm sm:w-[22rem] pointer-events-auto select-none transition-all duration-300 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
       <div
         className={`relative overflow-hidden rounded-xl border shadow-lg shadow-black/5 ${getStyles()}`}
       >
