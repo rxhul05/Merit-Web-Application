@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Layout from './Layout';
+import LoadingSpinner from './LoadingSpinner';
 import { supabase } from '../lib/supabase';
 import { Student } from '../types';
+import { useToast } from './Toast';
 import { 
   ArrowLeft, 
   Plus, 
@@ -11,7 +13,8 @@ import {
   Save, 
   X,
   Filter,
-  Users
+  Users,
+  AlertCircle
 } from 'lucide-react';
 
 interface StudentManagementProps {
@@ -22,10 +25,12 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     roll_number: '',
@@ -34,6 +39,8 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
     semester: '',
     batch: ''
   });
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadStudents();
@@ -45,6 +52,9 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
 
   const loadStudents = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('students')
         .select('*')
@@ -54,6 +64,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
       setStudents(data || []);
     } catch (error) {
       console.error('Error loading students:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load students';
+      setError(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'Error Loading Students',
+        message: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
@@ -76,9 +93,52 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
     setFilteredStudents(filtered);
   };
 
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Name is required';
+    }
+    
+    if (!formData.roll_number.trim()) {
+      errors.roll_number = 'Roll number is required';
+    }
+    
+    if (!formData.semester.trim()) {
+      errors.semester = 'Semester is required';
+    }
+    
+    if (!formData.batch.trim()) {
+      errors.batch = 'Batch is required';
+    }
+    
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      showToast({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Please fix the errors in the form before submitting.',
+      });
+      return;
+    }
+
     try {
+      setSaving(true);
+      
       if (editingStudent) {
         const { error } = await supabase
           .from('students')
@@ -89,12 +149,24 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
           .eq('id', editingStudent.id);
 
         if (error) throw error;
+        
+        showToast({
+          type: 'success',
+          title: 'Student Updated',
+          message: 'Student information has been updated successfully.',
+        });
       } else {
         const { error } = await supabase
           .from('students')
           .insert([formData]);
 
         if (error) throw error;
+        
+        showToast({
+          type: 'success',
+          title: 'Student Added',
+          message: 'New student has been added successfully.',
+        });
       }
 
       setFormData({
@@ -105,12 +177,20 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
         semester: '',
         batch: ''
       });
+      setFormErrors({});
       setShowAddForm(false);
       setEditingStudent(null);
       loadStudents();
     } catch (error) {
       console.error('Error saving student:', error);
-      alert('Error saving student. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save student';
+      showToast({
+        type: 'error',
+        title: 'Error Saving Student',
+        message: errorMessage,
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -128,7 +208,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
   };
 
   const handleDelete = async (studentId: string) => {
-    if (!confirm('Are you sure you want to delete this student?')) return;
+    if (!confirm('Are you sure you want to delete this student? This action cannot be undone.')) return;
 
     try {
       const { error } = await supabase
@@ -137,10 +217,22 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
         .eq('id', studentId);
 
       if (error) throw error;
+      
+      showToast({
+        type: 'success',
+        title: 'Student Deleted',
+        message: 'Student has been deleted successfully.',
+      });
+      
       loadStudents();
     } catch (error) {
       console.error('Error deleting student:', error);
-      alert('Error deleting student. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete student';
+      showToast({
+        type: 'error',
+        title: 'Error Deleting Student',
+        message: errorMessage,
+      });
     }
   };
 
@@ -241,8 +333,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.name ? 'border-red-300' : 'border-gray-300'
+                  }`}
                 />
+                {formErrors.name && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
+                )}
               </div>
 
               <div>
@@ -254,8 +351,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                   required
                   value={formData.roll_number}
                   onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.roll_number ? 'border-red-300' : 'border-gray-300'
+                  }`}
                 />
+                {formErrors.roll_number && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.roll_number}</p>
+                )}
               </div>
 
               <div>
@@ -266,8 +368,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.email ? 'border-red-300' : 'border-gray-300'
+                  }`}
                 />
+                {formErrors.email && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                )}
               </div>
 
               <div>
@@ -278,8 +385,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.phone ? 'border-red-300' : 'border-gray-300'
+                  }`}
                 />
+                {formErrors.phone && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
+                )}
               </div>
 
               <div>
@@ -292,8 +404,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                   placeholder="e.g., Semester 1, Semester 2"
                   value={formData.semester}
                   onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.semester ? 'border-red-300' : 'border-gray-300'
+                  }`}
                 />
+                {formErrors.semester && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.semester}</p>
+                )}
               </div>
 
               <div>
@@ -306,8 +423,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                   placeholder="e.g., 2024-2025"
                   value={formData.batch}
                   onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.batch ? 'border-red-300' : 'border-gray-300'
+                  }`}
                 />
+                {formErrors.batch && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.batch}</p>
+                )}
               </div>
 
               <div className="md:col-span-2 flex justify-end space-x-3">
@@ -320,10 +442,15 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={saving}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Save className="h-4 w-4" />
-                  <span>{editingStudent ? 'Update' : 'Save'}</span>
+                  {saving ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  <span>{saving ? 'Saving...' : (editingStudent ? 'Update' : 'Save')}</span>
                 </button>
               </div>
             </form>
@@ -340,8 +467,19 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
 
           {loading ? (
             <div className="p-6 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-500 mt-2">Loading students...</p>
+              <LoadingSpinner size="lg" text="Loading students..." />
+            </div>
+          ) : error ? (
+            <div className="p-6 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Students</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <button
+                onClick={loadStudents}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Try Again
+              </button>
             </div>
           ) : filteredStudents.length === 0 ? (
             <div className="p-6 text-center">

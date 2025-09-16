@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { AdminUser } from '../types';
+import { useToast } from '../components/Toast';
 
 interface AuthContextType {
   user: AdminUser | null;
@@ -22,6 +23,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
     // Check current session
@@ -63,6 +65,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('Login error:', error);
+        showToast({
+          type: 'error',
+          title: 'Login Failed',
+          message: error.message || 'Invalid email or password. Please try again.',
+        });
         return false;
       }
 
@@ -72,18 +79,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: data.user.email || '',
           name: data.user.user_metadata.name || data.user.email || '',
         });
+        showToast({
+          type: 'success',
+          title: 'Welcome!',
+          message: 'You have successfully logged in.',
+        });
         return true;
       }
       return false;
     } catch (error) {
       console.error('Login error:', error);
+      showToast({
+        type: 'error',
+        title: 'Login Error',
+        message: 'An unexpected error occurred. Please try again.',
+      });
       return false;
     }
   };
 
   const logout = async (): Promise<void> => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      showToast({
+        type: 'info',
+        title: 'Logged Out',
+        message: 'You have been successfully logged out.',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      showToast({
+        type: 'error',
+        title: 'Logout Error',
+        message: 'An error occurred while logging out.',
+      });
+    }
   };
 
   return (

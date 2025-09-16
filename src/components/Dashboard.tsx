@@ -3,7 +3,9 @@ import Layout from './Layout';
 import StudentManagement from './StudentManagement';
 import MarksEntry from './MarksEntry';
 import MeritList from './MeritList';
+import LoadingSpinner from './LoadingSpinner';
 import { supabase } from '../lib/supabase';
+import { useToast } from './Toast';
 import { 
   Users, 
   BookOpen, 
@@ -12,7 +14,8 @@ import {
   UserPlus,
   FileText,
   Award,
-  Calendar
+  Calendar,
+  AlertCircle
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -30,6 +33,9 @@ const Dashboard: React.FC = () => {
     completedAssessments: 0,
     averagePercentage: 0
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadDashboardStats();
@@ -37,28 +43,39 @@ const Dashboard: React.FC = () => {
 
   const loadDashboardStats = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
       // Get total students
-      const { count: studentsCount } = await supabase
+      const { count: studentsCount, error: studentsError } = await supabase
         .from('students')
         .select('*', { count: 'exact', head: true });
 
+      if (studentsError) throw studentsError;
+
       // Get total subjects
-      const { count: subjectsCount } = await supabase
+      const { count: subjectsCount, error: subjectsError } = await supabase
         .from('subjects')
         .select('*', { count: 'exact', head: true });
 
+      if (subjectsError) throw subjectsError;
+
       // Get completed assessments (students with marks)
-      const { data: marksData } = await supabase
+      const { data: marksData, error: marksError } = await supabase
         .from('marks')
         .select('student_id', { distinct: true });
 
+      if (marksError) throw marksError;
+
       // Calculate average percentage
-      const { data: allMarks } = await supabase
+      const { data: allMarks, error: allMarksError } = await supabase
         .from('marks')
         .select(`
           marks,
           subjects!inner(max_marks)
         `);
+
+      if (allMarksError) throw allMarksError;
 
       let totalPercentage = 0;
       if (allMarks && allMarks.length > 0) {
@@ -77,6 +94,15 @@ const Dashboard: React.FC = () => {
       });
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard statistics';
+      setError(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'Error Loading Dashboard',
+        message: errorMessage,
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,13 +112,13 @@ const Dashboard: React.FC = () => {
     icon: React.ElementType;
     color: string;
   }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-6 hover-lift animate-scaleIn">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+          <p className="text-sm font-medium text-gray-600 mb-2">{title}</p>
+          <p className="text-3xl font-bold gradient-text">{value}</p>
         </div>
-        <div className={`p-3 rounded-full ${color}`}>
+        <div className={`p-4 rounded-xl shadow-md ${color} animate-pulse-slow`}>
           <Icon className="h-6 w-6 text-white" />
         </div>
       </div>
@@ -108,14 +134,14 @@ const Dashboard: React.FC = () => {
   }) => (
     <button
       onClick={onClick}
-      className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-left hover:shadow-md transition-shadow w-full"
+      className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-6 text-left hover-lift transition-all duration-300 w-full group"
     >
       <div className="flex items-start space-x-4">
-        <div className={`p-3 rounded-full ${color}`}>
+        <div className={`p-4 rounded-xl shadow-md ${color} group-hover:scale-110 transition-transform duration-200`}>
           <Icon className="h-6 w-6 text-white" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{title}</h3>
           <p className="text-sm text-gray-600 mt-1">{description}</p>
         </div>
       </div>
@@ -132,6 +158,36 @@ const Dashboard: React.FC = () => {
 
   if (activeTab === 'merit') {
     return <MeritList onBack={() => setActiveTab('overview')} />;
+  }
+
+  if (loading) {
+    return (
+      <Layout title="Dashboard">
+        <div className="flex items-center justify-center py-12">
+          <LoadingSpinner size="lg" text="Loading dashboard..." />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout title="Dashboard">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Dashboard</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={loadDashboardStats}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
@@ -166,9 +222,12 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-6 animate-slideIn">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+            <div className="w-1 h-6 bg-gradient-to-b from-blue-600 to-purple-600 rounded-full mr-3"></div>
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <QuickAction
               title="Manage Students"
               description="Add, edit, or remove student records"
@@ -194,10 +253,15 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-6 animate-fadeIn">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">System Overview</h2>
-            <Calendar className="h-5 w-5 text-gray-400" />
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <div className="w-1 h-6 bg-gradient-to-b from-green-600 to-blue-600 rounded-full mr-3"></div>
+              System Overview
+            </h2>
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Calendar className="h-5 w-5 text-blue-600" />
+            </div>
           </div>
           
           <div className="space-y-4">
