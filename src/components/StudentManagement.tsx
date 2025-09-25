@@ -6,7 +6,6 @@ import { useToast } from './Toast';
 import { 
   ArrowLeft, 
   Plus, 
-  Search, 
   Edit, 
   Trash2, 
   Save, 
@@ -325,23 +324,22 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
       </div>
 
       {/* Search and Filters */}
-      <div className="card p-6">
+      <div className="card p-4 sm:p-6 overflow-hidden">
         <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <div className="flex-1 min-w-0">
             <input
               type="text"
               placeholder="Search students by name or roll number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-dark w-full pl-12 pr-4"
+              className="input-dark w-full"
             />
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`btn-secondary flex items-center space-x-2 ${showFilters ? 'bg-accent-500/20 border-accent-500/30' : ''}`}
+              className={`btn-secondary flex items-center justify-center space-x-2 whitespace-nowrap ${showFilters ? 'bg-accent-500/20 border-accent-500/30' : ''}`}
             >
               <Filter className="h-4 w-4" />
               <span>Filters</span>
@@ -360,46 +358,48 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
         </div>
         
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-dark-600 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Semester</label>
-              <select
-                value={selectedSemester}
-                onChange={(e) => setSelectedSemester(e.target.value)}
-                className="input-dark w-full"
-              >
-                <option value="">All Semesters</option>
-                {semesters.map(semester => (
-                  <option key={semester} value={semester}>{semester}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Batch</label>
-              <select
-                value={selectedBatch}
-                onChange={(e) => setSelectedBatch(e.target.value)}
-                className="input-dark w-full"
-              >
-                <option value="">All Batches</option>
-                {batches.map(batch => (
-                  <option key={batch} value={batch}>{batch}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Sort By</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'name' | 'roll_number' | 'semester')}
-                className="input-dark w-full"
-              >
-                <option value="name">Name</option>
-                <option value="roll_number">Roll Number</option>
-                <option value="semester">Semester</option>
-              </select>
+          <div className="mt-4 pt-4 border-t border-dark-600 overflow-hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="min-w-0">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Semester</label>
+                <select
+                  value={selectedSemester}
+                  onChange={(e) => setSelectedSemester(e.target.value)}
+                  className="input-dark w-full"
+                >
+                  <option value="">All Semesters</option>
+                  {semesters.map(semester => (
+                    <option key={semester} value={semester}>{semester}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="min-w-0">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Batch</label>
+                <select
+                  value={selectedBatch}
+                  onChange={(e) => setSelectedBatch(e.target.value)}
+                  className="input-dark w-full"
+                >
+                  <option value="">All Batches</option>
+                  {batches.map(batch => (
+                    <option key={batch} value={batch}>{batch}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'name' | 'roll_number' | 'semester')}
+                  className="input-dark w-full"
+                >
+                  <option value="name">Name</option>
+                  <option value="roll_number">Roll Number</option>
+                  <option value="semester">Semester</option>
+                </select>
+              </div>
             </div>
           </div>
         )}

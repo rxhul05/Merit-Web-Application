@@ -97,20 +97,6 @@ const Layout: React.FC<LayoutProps> = ({
             </button>
           </div>
 
-          {/* User Profile */}
-          {/* <div className="p-6 border-b border-dark-600/50">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-accent rounded-xl flex items-center justify-center shadow-glow">
-                <User className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-100 truncate">{user?.name || 'Admin User'}</p>
-                <p className="text-xs text-gray-400 truncate">{user?.email || 'admin@example.com'}</p>
-              </div>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            </div>
-          </div> */}
-
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navigation.map((item) => (
@@ -173,24 +159,6 @@ const Layout: React.FC<LayoutProps> = ({
 
               {/* Header Actions */}
               <div className="flex items-center space-x-4">
-                {/* Search */}
-                <div className="hidden md:block relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="input-dark pl-10 pr-4 py-2 w-64 text-sm"
-                  />
-                </div>
-
-                {/* Notifications */}
-                <button className="relative p-2 rounded-lg hover:bg-dark-700/50 transition-colors">
-                  <Bell className="h-5 w-5 text-gray-300" />
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent-500 rounded-full animate-pulse"></div>
-                </button>
-
                 {/* User Menu */}
                 <div className="hidden sm:flex items-center space-x-3 bg-dark-800/50 border border-dark-600 px-3 py-2 rounded-xl">
                   <div className="w-8 h-8 bg-gradient-accent rounded-lg flex items-center justify-center">

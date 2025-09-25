@@ -5,7 +5,6 @@ import {
   ArrowLeft, 
   Trophy, 
   Download, 
-  Search, 
   Medal,
   Award,
   Star
@@ -143,12 +142,6 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
     XLSX.writeFile(wb, 'merit-list.xlsx');
   };
 
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Medal className="h-5 w-5 text-yellow-400" />;
-    if (rank === 2) return <Award className="h-5 w-5 text-gray-400" />;
-    if (rank === 3) return <Star className="h-5 w-5 text-orange-400" />;
-    return <span className="text-sm font-medium text-gray-300">#{rank}</span>;
-  };
 
   const semesters = [...new Set(meritList.map(entry => entry.student.semester))];
 
@@ -193,9 +186,9 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
       </div>
 
       {/* Filters */}
-      <div className="card p-6">
+      <div className="card p-4 sm:p-6 overflow-hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-300 mb-2">Semester</label>
             <select
               value={selectedSemester}
@@ -209,21 +202,18 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
             </select>
           </div>
           
-          <div>
+          <div className="min-w-0 sm:col-span-2 lg:col-span-1">
             <label className="block text-sm font-medium text-gray-300 mb-2">Search</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by name or roll number..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-dark w-full pl-10"
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Search by name or roll number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input-dark w-full"
+            />
           </div>
           
-          <div>
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-300 mb-2">Min %</label>
             <input
               type="number"
@@ -231,10 +221,12 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               value={minPercentage}
               onChange={(e) => setMinPercentage(e.target.value)}
               className="input-dark w-full"
+              min="0"
+              max="100"
             />
           </div>
           
-          <div>
+          <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-300 mb-2">Max %</label>
             <input
               type="number"
@@ -242,11 +234,16 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               value={maxPercentage}
               onChange={(e) => setMaxPercentage(e.target.value)}
               className="input-dark w-full"
+              min="0"
+              max="100"
             />
           </div>
         </div>
         
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="text-sm text-gray-400">
+            Showing {filteredList.length} of {meritList.length} students
+          </div>
           <button
             onClick={() => {
               setSelectedSemester('');
@@ -254,7 +251,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               setMinPercentage('');
               setMaxPercentage('');
             }}
-            className="btn-secondary"
+            className="btn-secondary w-full sm:w-auto"
           >
             Clear Filters
           </button>

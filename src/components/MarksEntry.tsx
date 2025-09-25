@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Student, Subject, Mark } from '../types';
+import { Student, Subject } from '../types';
 import { 
   ArrowLeft, 
   Plus, 
-  Search, 
   BookOpen, 
   Save,
   X
@@ -141,9 +140,9 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
 
       {/* Subject Form */}
       {showSubjectForm && (
-        <div className="card p-6">
+        <div className="card p-4 sm:p-6 overflow-hidden">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-100">Add New Subject</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-100">Add New Subject</h2>
             <button
               onClick={() => setShowSubjectForm(false)}
               className="text-gray-400 hover:text-gray-200 p-2 rounded-lg hover:bg-dark-700/50 transition-colors"
@@ -152,77 +151,79 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
             </button>
           </div>
 
-          <form onSubmit={handleSubjectSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Subject Name
-              </label>
-              <input
-                type="text"
-                value={subjectForm.name}
-                onChange={(e) => setSubjectForm({...subjectForm, name: e.target.value})}
-                className="input-dark w-full"
-                placeholder="Enter subject name"
-                required
-              />
+          <form onSubmit={handleSubjectSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="min-w-0">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Subject Name
+                </label>
+                <input
+                  type="text"
+                  value={subjectForm.name}
+                  onChange={(e) => setSubjectForm({...subjectForm, name: e.target.value})}
+                  className="input-dark w-full"
+                  placeholder="Enter subject name"
+                  required
+                />
+              </div>
+
+              <div className="min-w-0">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Subject Code
+                </label>
+                <input
+                  type="text"
+                  value={subjectForm.code}
+                  onChange={(e) => setSubjectForm({...subjectForm, code: e.target.value})}
+                  className="input-dark w-full"
+                  placeholder="Enter subject code"
+                  required
+                />
+              </div>
+
+              <div className="min-w-0">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Maximum Marks
+                </label>
+                <input
+                  type="number"
+                  value={subjectForm.max_marks}
+                  onChange={(e) => setSubjectForm({...subjectForm, max_marks: parseInt(e.target.value)})}
+                  className="input-dark w-full"
+                  placeholder="Enter maximum marks"
+                  required
+                />
+              </div>
+
+              <div className="min-w-0">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Semester
+                </label>
+                <select
+                  value={subjectForm.semester}
+                  onChange={(e) => setSubjectForm({...subjectForm, semester: e.target.value})}
+                  className="input-dark w-full"
+                  required
+                >
+                  <option value="">Select Semester</option>
+                  {semesters.map(semester => (
+                    <option key={semester} value={semester}>{semester}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Subject Code
-              </label>
-              <input
-                type="text"
-                value={subjectForm.code}
-                onChange={(e) => setSubjectForm({...subjectForm, code: e.target.value})}
-                className="input-dark w-full"
-                placeholder="Enter subject code"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Maximum Marks
-              </label>
-              <input
-                type="number"
-                value={subjectForm.max_marks}
-                onChange={(e) => setSubjectForm({...subjectForm, max_marks: parseInt(e.target.value)})}
-                className="input-dark w-full"
-                placeholder="Enter maximum marks"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Semester
-              </label>
-              <select
-                value={subjectForm.semester}
-                onChange={(e) => setSubjectForm({...subjectForm, semester: e.target.value})}
-                className="input-dark w-full"
-                required
-              >
-                <option value="">Select Semester</option>
-                {semesters.map(semester => (
-                  <option key={semester} value={semester}>{semester}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex justify-end space-x-3 sm:col-span-2">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setShowSubjectForm(false)}
-                className="btn-secondary"
+                className="btn-secondary order-2 sm:order-1"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="btn-primary"
+                className="btn-primary order-1 sm:order-2"
               >
                 Add Subject
               </button>
@@ -232,22 +233,19 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
       )}
 
       {/* Filters */}
-      <div className="card p-6">
+      <div className="card p-4 sm:p-6 overflow-hidden">
         <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <label className="block text-sm font-medium text-gray-300 mb-2">Search Students</label>
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by name or roll number..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-dark w-full pl-12"
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Search by name or roll number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input-dark w-full"
+            />
           </div>
-          <div>
+          <div className="w-full lg:w-auto lg:min-w-[200px]">
             <label className="block text-sm font-medium text-gray-300 mb-2">Semester</label>
             <select
               value={selectedSemester}
