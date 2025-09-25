@@ -38,23 +38,29 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="bg-red-100 p-3 rounded-full">
-                <AlertTriangle className="h-8 w-8 text-red-600" />
+        <div className="min-h-screen bg-gradient-dark flex items-center justify-center px-4 relative overflow-hidden">
+          {/* Background Effects */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-40 -right-40 w-80 h-80 bg-red-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
+            <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent-500/10 rounded-full blur-3xl animate-pulse-slow"></div>
+          </div>
+
+          <div className="max-w-md w-full card p-8 text-center relative z-10 animate-scaleIn">
+            <div className="flex justify-center mb-6">
+              <div className="bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-2xl shadow-glow animate-pulse">
+                <AlertTriangle className="h-10 w-10 text-white" />
               </div>
             </div>
             
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
-            <p className="text-gray-600 mb-6">
+            <h1 className="text-2xl font-bold text-gray-100 mb-3">Something went wrong</h1>
+            <p className="text-gray-400 mb-6">
               We're sorry, but something unexpected happened. Please try refreshing the page or contact support if the problem persists.
             </p>
 
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="mb-6 p-4 bg-gray-100 rounded-lg text-left">
-                <h3 className="font-medium text-gray-900 mb-2">Error Details:</h3>
-                <pre className="text-xs text-gray-600 overflow-auto">
+              <div className="mb-6 p-4 bg-dark-800/80 border border-dark-600 rounded-xl text-left">
+                <h3 className="font-semibold text-gray-200 mb-2">Error Details:</h3>
+                <pre className="text-xs text-gray-400 overflow-auto max-h-32">
                   {this.state.error.toString()}
                 </pre>
               </div>
@@ -63,14 +69,14 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="flex space-x-3">
               <button
                 onClick={this.handleReset}
-                className="flex-1 flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="btn-primary flex-1 flex items-center justify-center space-x-2"
               >
                 <RefreshCw className="h-4 w-4" />
                 <span>Try Again</span>
               </button>
               <button
                 onClick={() => window.location.href = '/'}
-                className="flex-1 flex items-center justify-center space-x-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                className="btn-secondary flex-1 flex items-center justify-center space-x-2"
               >
                 <Home className="h-4 w-4" />
                 <span>Go Home</span>

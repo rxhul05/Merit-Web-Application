@@ -12,7 +12,7 @@ const AppContent: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
         <LoadingSpinner size="lg" text="Loading application..." />
       </div>
     );

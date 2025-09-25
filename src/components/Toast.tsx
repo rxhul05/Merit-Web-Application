@@ -37,7 +37,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setToasts(prev => [...prev, newToast]);
 
-    if (newToast.duration > 0) {
+    if (newToast.duration && newToast.duration > 0) {
       setTimeout(() => {
         hideToast(id);
       }, newToast.duration);
@@ -81,59 +81,59 @@ const ToastItem: React.FC<{ toast: Toast; onHide: (id: string) => void }> = ({ t
   const getIcon = () => {
     switch (toast.type) {
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
+        return <CheckCircle className="h-5 w-5 text-emerald-400" />;
       case 'error':
-        return <AlertCircle className="h-5 w-5 text-red-600" />;
+        return <AlertCircle className="h-5 w-5 text-red-400" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
+        return <AlertTriangle className="h-5 w-5 text-amber-400" />;
       case 'info':
-        return <Info className="h-5 w-5 text-blue-600" />;
+        return <Info className="h-5 w-5 text-accent-400" />;
     }
   };
 
   const getStyles = () => {
     switch (toast.type) {
       case 'success':
-        return 'bg-white/70 backdrop-blur border-green-200 text-green-900';
+        return 'glass border-emerald-500/30 text-gray-100';
       case 'error':
-        return 'bg-white/70 backdrop-blur border-red-200 text-red-900';
+        return 'glass border-red-500/30 text-gray-100';
       case 'warning':
-        return 'bg-white/70 backdrop-blur border-yellow-200 text-yellow-900';
+        return 'glass border-amber-500/30 text-gray-100';
       case 'info':
-        return 'bg-white/70 backdrop-blur border-blue-200 text-blue-900';
+        return 'glass border-accent-500/30 text-gray-100';
     }
   };
 
   const getAccent = () => {
     switch (toast.type) {
       case 'success':
-        return 'from-green-500/90 to-emerald-500/90';
+        return 'from-emerald-500 to-teal-500';
       case 'error':
-        return 'from-red-500/90 to-rose-500/90';
+        return 'from-red-500 to-rose-500';
       case 'warning':
-        return 'from-amber-500/90 to-yellow-500/90';
+        return 'from-amber-500 to-orange-500';
       case 'info':
-        return 'from-blue-500/90 to-cyan-500/90';
+        return 'from-accent-500 to-accent-600';
     }
   };
 
   const getIconBg = () => {
     switch (toast.type) {
       case 'success':
-        return 'bg-green-50 text-green-700 ring-green-200';
+        return 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/30';
       case 'error':
-        return 'bg-red-50 text-red-700 ring-red-200';
+        return 'bg-red-500/20 text-red-400 ring-red-500/30';
       case 'warning':
-        return 'bg-amber-50 text-amber-700 ring-amber-200';
+        return 'bg-amber-500/20 text-amber-400 ring-amber-500/30';
       case 'info':
-        return 'bg-blue-50 text-blue-700 ring-blue-200';
+        return 'bg-accent-500/20 text-accent-400 ring-accent-500/30';
     }
   };
 
   return (
     <div className={`relative w-full sm:max-w-sm sm:w-[22rem] pointer-events-auto select-none transition-all duration-300 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
       <div
-        className={`relative overflow-hidden rounded-xl border shadow-lg shadow-black/5 ${getStyles()}`}
+        className={`relative overflow-hidden rounded-2xl border shadow-dark-lg ${getStyles()}`}
       >
         <div className={`absolute left-0 top-0 h-full w-1.5 bg-gradient-to-b ${getAccent()}`} />
 
@@ -144,14 +144,14 @@ const ToastItem: React.FC<{ toast: Toast; onHide: (id: string) => void }> = ({ t
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold leading-5 truncate">{toast.title}</p>
+              <p className="text-sm font-semibold leading-5 truncate text-gray-100">{toast.title}</p>
               {toast.message && (
-                <p className="mt-1 text-sm leading-5 text-black/70 line-clamp-3">{toast.message}</p>
+                <p className="mt-1 text-sm leading-5 text-gray-300 line-clamp-3">{toast.message}</p>
               )}
             </div>
 
             <button
-              className="ml-2 rounded-md p-1 text-black/50 hover:text-black/70 hover:bg-black/5 transition-colors"
+              className="ml-2 rounded-lg p-1 text-gray-400 hover:text-gray-200 hover:bg-white/10 transition-colors"
               onClick={() => onHide(toast.id)}
               aria-label="Dismiss"
             >
@@ -161,9 +161,9 @@ const ToastItem: React.FC<{ toast: Toast; onHide: (id: string) => void }> = ({ t
         </div>
 
         {toast.duration && toast.duration > 0 && (
-          <div className="h-1 bg-black/5">
+          <div className="h-1 bg-dark-700/50">
             <div
-              className={`h-full bg-gradient-to-r ${getAccent()}`}
+              className={`h-full bg-gradient-to-r ${getAccent()} shadow-glow`}
               style={{ width: mounted ? '0%' : '100%', transition: `width ${toast.duration}ms linear` }}
             />
           </div>

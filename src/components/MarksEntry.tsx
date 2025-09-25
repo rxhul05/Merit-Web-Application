@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Layout from './Layout';
 import { supabase } from '../lib/supabase';
 import { Student, Subject, Mark } from '../types';
 import { 
@@ -8,9 +7,7 @@ import {
   Search, 
   BookOpen, 
   Save,
-  X,
-  Filter,
-  AlertCircle
+  X
 } from 'lucide-react';
 
 interface MarksEntryProps {
@@ -20,8 +17,6 @@ interface MarksEntryProps {
 const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [marks, setMarks] = useState<Mark[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedSemester, setSelectedSemester] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showSubjectForm, setShowSubjectForm] = useState(false);
@@ -40,19 +35,15 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
 
   const loadData = async () => {
     try {
-      const [studentsResult, subjectsResult, marksResult] = await Promise.all([
+      const [studentsResult, subjectsResult] = await Promise.all([
         supabase.from('students').select('*').order('name'),
-        supabase.from('subjects').select('*').order('name'),
-        supabase.from('marks').select('*')
+        supabase.from('subjects').select('*').order('name')
       ]);
 
       setStudents(studentsResult.data || []);
       setSubjects(subjectsResult.data || []);
-      setMarks(marksResult.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -62,20 +53,14 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
       const { error } = await supabase
         .from('subjects')
         .insert([subjectForm]);
-
+      
       if (error) throw error;
-
-      setSubjectForm({
-        name: '',
-        code: '',
-        max_marks: 100,
-        semester: ''
-      });
+      
       setShowSubjectForm(false);
+      setSubjectForm({ name: '', code: '', max_marks: 100, semester: '' });
       loadData();
     } catch (error) {
-      console.error('Error saving subject:', error);
-      alert('Error saving subject. Please try again.');
+      console.error('Error adding subject:', error);
     }
   };
 
@@ -84,78 +69,39 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
     if (!selectedStudent) return;
 
     try {
-      // Delete existing marks for this student and semester
-      await supabase
+      const marksToInsert = Object.entries(marksData).map(([subjectId, marks]) => ({
+        student_id: selectedStudent.id,
+        subject_id: subjectId,
+        marks: marks
+      }));
+
+      const { error } = await supabase
         .from('marks')
-        .delete()
-        .eq('student_id', selectedStudent.id)
-        .eq('semester', selectedStudent.semester);
+        .upsert(marksToInsert);
 
-      // Insert new marks
-      const marksToInsert = Object.entries(marksData)
-        .filter(([_, marks]) => marks > 0)
-        .map(([subjectId, marksValue]) => ({
-          student_id: selectedStudent.id,
-          subject_id: subjectId,
-          marks: marksValue,
-          semester: selectedStudent.semester
-        }));
+      if (error) throw error;
 
-      if (marksToInsert.length > 0) {
-        const { error } = await supabase
-          .from('marks')
-          .insert(marksToInsert);
-
-        if (error) throw error;
-      }
-
-      alert('Marks saved successfully!');
       setSelectedStudent(null);
       setMarksData({});
-      loadData();
     } catch (error) {
       console.error('Error saving marks:', error);
-      alert('Error saving marks. Please try again.');
     }
-  };
-
-  const loadStudentMarks = async (student: Student) => {
-    try {
-      const { data } = await supabase
-        .from('marks')
-        .select('*')
-        .eq('student_id', student.id)
-        .eq('semester', student.semester);
-
-      const marksMap: { [key: string]: number } = {};
-      data?.forEach(mark => {
-        marksMap[mark.subject_id] = mark.marks;
-      });
-      setMarksData(marksMap);
-    } catch (error) {
-      console.error('Error loading student marks:', error);
-    }
-  };
-
-  const handleStudentSelect = (student: Student) => {
-    setSelectedStudent(student);
-    loadStudentMarks(student);
   };
 
   const getFilteredStudents = () => {
     let filtered = students;
-    
+
     if (selectedSemester) {
-      filtered = filtered.filter(s => s.semester === selectedSemester);
+      filtered = filtered.filter(student => student.semester === selectedSemester);
     }
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(s => 
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.roll_number.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(student =>
+        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.roll_number.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     return filtered;
   };
 
@@ -166,255 +112,270 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
   const semesters = [...new Set(students.map(s => s.semester))].filter(Boolean);
 
   return (
-    <Layout title="Marks Entry">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
-            <button
-              onClick={onBack}
-              className="flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900 flex-shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
-              <span className="sm:hidden">Back</span>
-            </button>
-            <div className="h-4 sm:h-6 border-l border-gray-300 hidden sm:block"></div>
-            <div className="flex items-center space-x-2 min-w-0">
-              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Marks Entry</h1>
-            </div>
-          </div>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center space-x-4">
           <button
-            onClick={() => setShowSubjectForm(true)}
-            className="flex items-center space-x-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto justify-center sm:justify-start"
+            onClick={onBack}
+            className="p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
           >
-            <Plus className="h-4 w-4" />
-            <span>Add Subject</span>
+            <ArrowLeft className="h-5 w-5 text-gray-300" />
           </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-100 flex items-center">
+              <BookOpen className="h-6 w-6 text-accent-400 mr-2" />
+              Marks Entry
+            </h1>
+            <p className="text-gray-400 mt-1">Enter and manage student marks</p>
+          </div>
         </div>
+        <button
+          onClick={() => setShowSubjectForm(true)}
+          className="btn-primary flex items-center space-x-2"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Add Subject</span>
+        </button>
+      </div>
 
-        {/* Subject Form */}
-        {showSubjectForm && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Add New Subject</h2>
+      {/* Subject Form */}
+      {showSubjectForm && (
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-100">Add New Subject</h2>
+            <button
+              onClick={() => setShowSubjectForm(false)}
+              className="text-gray-400 hover:text-gray-200 p-2 rounded-lg hover:bg-dark-700/50 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubjectSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Subject Name
+              </label>
+              <input
+                type="text"
+                value={subjectForm.name}
+                onChange={(e) => setSubjectForm({...subjectForm, name: e.target.value})}
+                className="input-dark w-full"
+                placeholder="Enter subject name"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Subject Code
+              </label>
+              <input
+                type="text"
+                value={subjectForm.code}
+                onChange={(e) => setSubjectForm({...subjectForm, code: e.target.value})}
+                className="input-dark w-full"
+                placeholder="Enter subject code"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Maximum Marks
+              </label>
+              <input
+                type="number"
+                value={subjectForm.max_marks}
+                onChange={(e) => setSubjectForm({...subjectForm, max_marks: parseInt(e.target.value)})}
+                className="input-dark w-full"
+                placeholder="Enter maximum marks"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Semester
+              </label>
+              <select
+                value={subjectForm.semester}
+                onChange={(e) => setSubjectForm({...subjectForm, semester: e.target.value})}
+                className="input-dark w-full"
+                required
+              >
+                <option value="">Select Semester</option>
+                {semesters.map(semester => (
+                  <option key={semester} value={semester}>{semester}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end space-x-3 sm:col-span-2">
               <button
+                type="button"
                 onClick={() => setShowSubjectForm(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="btn-secondary"
               >
-                <X className="h-5 w-5" />
+                Cancel
               </button>
-            </div>
-
-            <form onSubmit={handleSubjectSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subject Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={subjectForm.name}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subject Code *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={subjectForm.code}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Maximum Marks *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={subjectForm.max_marks}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, max_marks: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Semester *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g., Semester 1"
-                  value={subjectForm.semester}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, semester: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                />
-              </div>
-
-              <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowSubjectForm(false)}
-                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Save className="h-4 w-4" />
-                  <span>Save Subject</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Student Selection */}
-        {!selectedStudent && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Select Student</h2>
-            
-            {/* Search and Filter */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search students..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                />
-              </div>
-              <div className="relative w-full sm:w-auto sm:min-w-48">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <select
-                  value={selectedSemester}
-                  onChange={(e) => setSelectedSemester(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="">All Semesters</option>
-                  {semesters.map(semester => (
-                    <option key={semester} value={semester}>{semester}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Students Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {getFilteredStudents().map(student => (
-                <button
-                  key={student.id}
-                  onClick={() => handleStudentSelect(student)}
-                  className="text-left p-4 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-                >
-                  <div className="font-medium text-gray-900">{student.name}</div>
-                  <div className="text-sm text-gray-500">Roll: {student.roll_number}</div>
-                  <div className="text-sm text-gray-500">{student.semester}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Marks Entry Form */}
-        {selectedStudent && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Enter Marks</h2>
-                <p className="text-gray-600">
-                  Student: {selectedStudent.name} (Roll: {selectedStudent.roll_number})
-                </p>
-                <p className="text-sm text-gray-500">{selectedStudent.semester}</p>
-              </div>
               <button
-                onClick={() => {
-                  setSelectedStudent(null);
-                  setMarksData({});
-                }}
-                className="text-gray-400 hover:text-gray-600"
+                type="submit"
+                className="btn-primary"
               >
-                <X className="h-5 w-5" />
+                Add Subject
               </button>
             </div>
+          </form>
+        </div>
+      )}
 
-            <form onSubmit={handleMarksSubmit} className="space-y-4">
-              {getSubjectsForSemester(selectedStudent.semester).length === 0 ? (
-                <div className="text-center py-8">
-                  <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500">
-                    No subjects found for {selectedStudent.semester}
-                  </p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Please add subjects for this semester first.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {getSubjectsForSemester(selectedStudent.semester).map(subject => (
-                      <div key={subject.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <h3 className="font-medium text-gray-900">{subject.name}</h3>
-                          <span className="text-sm text-gray-500">Max: {subject.max_marks}</span>
+      {/* Filters */}
+      <div className="card p-6">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Search Students</label>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name or roll number..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="input-dark w-full pl-12"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Semester</label>
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              className="input-dark w-full"
+            >
+              <option value="">All Semesters</option>
+              {semesters.map(semester => (
+                <option key={semester} value={semester}>{semester}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Student Selection */}
+      {!selectedStudent && (
+        <div className="card">
+          <div className="px-6 py-4 border-b border-dark-600">
+            <h3 className="text-lg font-semibold text-gray-100">
+              Students ({getFilteredStudents().length})
+            </h3>
+          </div>
+
+          {getFilteredStudents().length === 0 ? (
+            <div className="p-6 text-center">
+              <p className="text-gray-400">No students found for the selected semester.</p>
+            </div>
+          ) : (
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {getFilteredStudents().map(student => (
+                  <div key={student.id} className="border border-dark-600 bg-dark-800/30 rounded-xl p-4 hover:bg-dark-700/30 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-gray-100">{student.name}</h4>
+                        <p className="text-sm text-gray-400">Roll: {student.roll_number}</p>
+                      </div>
+                      <button
+                        onClick={() => setSelectedStudent(student)}
+                        className="btn-primary"
+                      >
+                        Enter Marks
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Marks Entry Form */}
+      {selectedStudent && (
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-100">
+                Enter Marks for {selectedStudent.name}
+              </h3>
+              <p className="text-gray-400">Roll: {selectedStudent.roll_number} | Semester: {selectedStudent.semester}</p>
+            </div>
+            <button
+              onClick={() => {
+                setSelectedStudent(null);
+                setMarksData({});
+              }}
+              className="text-gray-400 hover:text-gray-200 p-2 rounded-lg hover:bg-dark-700/50 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleMarksSubmit} className="space-y-4">
+            {getSubjectsForSemester(selectedStudent.semester).length === 0 ? (
+              <div className="p-6 text-center">
+                <p className="text-gray-400">No subjects found for this semester.</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {getSubjectsForSemester(selectedStudent.semester).map(subject => (
+                    <div key={subject.id} className="border border-dark-600 bg-dark-800/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-gray-100">{subject.name}</h4>
+                          <p className="text-sm text-gray-400">{subject.code} | Max: {subject.max_marks}</p>
                         </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <label className="text-sm font-medium text-gray-300">Marks:</label>
                         <input
                           type="number"
                           min="0"
                           max={subject.max_marks}
                           value={marksData[subject.id] || ''}
-                          onChange={(e) => setMarksData({
-                            ...marksData,
-                            [subject.id]: parseInt(e.target.value) || 0
-                          })}
+                          onChange={(e) => setMarksData({...marksData, [subject.id]: parseInt(e.target.value) || 0})}
+                          className="input-dark flex-1"
                           placeholder={`Enter marks (0-${subject.max_marks})`}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
+                </div>
 
-                  <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedStudent(null);
-                        setMarksData({});
-                      }}
-                      className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      <Save className="h-4 w-4" />
-                      <span>Save Marks</span>
-                    </button>
-                  </div>
-                </>
-              )}
-            </form>
-          </div>
-        )}
-      </div>
-    </Layout>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStudent(null)}
+                    className="btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary flex items-center space-x-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>Save Marks</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </form>
+        </div>
+      )}
+    </div>
   );
 };
 

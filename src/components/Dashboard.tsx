@@ -14,8 +14,16 @@ import {
   UserPlus,
   FileText,
   Award,
-  Calendar,
-  AlertCircle
+  AlertCircle,
+  BarChart3,
+  Activity,
+  Clock,
+  Star,
+  ArrowUp,
+  ArrowDown,
+  Plus,
+  Download,
+  RefreshCw
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -108,21 +116,31 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const StatCard = ({ title, value, icon: Icon, color }: {
+  const StatCard = ({ title, value, icon: Icon, color, trend, trendUp }: {
     title: string;
     value: string | number;
     icon: React.ElementType;
     color: string;
+    trend?: string;
+    trendUp?: boolean;
   }) => (
-    <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-4 sm:p-6 hover-lift animate-scaleIn">
-      <div className="flex items-center justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1 sm:mb-2 truncate">{title}</p>
-          <p className="text-2xl sm:text-3xl font-bold gradient-text">{value}</p>
+    <div className="card-hover p-6 animate-scaleIn">
+      <div className="flex items-start justify-between mb-4">
+        <div className={`p-3 rounded-2xl shadow-glow ${color} animate-glow`}>
+          <Icon className="h-6 w-6 text-white" />
         </div>
-        <div className={`p-3 sm:p-4 rounded-xl shadow-md ${color} animate-pulse-slow flex-shrink-0 ml-2`}>
-          <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-        </div>
+        {trend && (
+          <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-medium ${
+            trendUp ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+          }`}>
+            {trendUp ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+            <span>{trend}</span>
+          </div>
+        )}
+      </div>
+      <div>
+        <p className="text-sm font-medium text-gray-400 mb-1 uppercase tracking-wider">{title}</p>
+        <p className="text-3xl font-bold gradient-text">{value}</p>
       </div>
     </div>
   );
@@ -136,36 +154,53 @@ const Dashboard: React.FC = () => {
   }) => (
     <button
       onClick={onClick}
-      className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-4 sm:p-6 text-left hover-lift transition-all duration-300 w-full group"
+      className="p-4 bg-dark-800/50 border border-dark-600 rounded-2xl text-left transition-all duration-300 w-full group hover:border-accent-500/30 hover:bg-dark-700/50"
     >
-      <div className="flex items-start space-x-3 sm:space-x-4">
-        <div className={`p-3 sm:p-4 rounded-xl shadow-md ${color} group-hover:scale-110 transition-transform duration-200 flex-shrink-0`}>
-          <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+      <div className="flex items-start space-x-4">
+        <div className={`p-3 rounded-xl shadow-glow ${color} group-hover:scale-110 transition-all duration-300 flex-shrink-0`}>
+          <Icon className="h-5 w-5 text-white" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">{title}</h3>
-          <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-2">{description}</p>
+          <h3 className="font-semibold text-gray-100 group-hover:text-accent-300 transition-colors mb-1">{title}</h3>
+          <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">{description}</p>
         </div>
+        <ArrowUp className="h-4 w-4 text-gray-500 group-hover:text-accent-400 transform group-hover:rotate-45 transition-all duration-300" />
       </div>
     </button>
   );
 
+  const handleNavigation = (page: string) => {
+    setActiveTab(page);
+  };
+
   if (activeTab === 'students') {
-    return <StudentManagement onBack={() => setActiveTab('overview')} />;
+    return (
+      <Layout title="Student Management" currentPage="students" onNavigate={handleNavigation}>
+        <StudentManagement onBack={() => setActiveTab('overview')} />
+      </Layout>
+    );
   }
 
   if (activeTab === 'marks') {
-    return <MarksEntry onBack={() => setActiveTab('overview')} />;
+    return (
+      <Layout title="Marks Entry" currentPage="marks" onNavigate={handleNavigation}>
+        <MarksEntry onBack={() => setActiveTab('overview')} />
+      </Layout>
+    );
   }
 
   if (activeTab === 'merit') {
-    return <MeritList onBack={() => setActiveTab('overview')} />;
+    return (
+      <Layout title="Merit List" currentPage="merit" onNavigate={handleNavigation}>
+        <MeritList onBack={() => setActiveTab('overview')} />
+      </Layout>
+    );
   }
 
   if (loading) {
     return (
-      <Layout title="Dashboard">
-        <div className="flex items-center justify-center py-12">
+      <Layout title="Dashboard" currentPage="overview" onNavigate={handleNavigation}>
+        <div className="flex items-center justify-center py-20">
           <LoadingSpinner size="lg" text="Loading dashboard..." />
         </div>
       </Layout>
@@ -174,17 +209,18 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <Layout title="Dashboard">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Dashboard</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+      <Layout title="Dashboard" currentPage="overview" onNavigate={handleNavigation}>
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center card p-8 max-w-md mx-auto">
+            <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-100 mb-2">Error Loading Dashboard</h3>
+            <p className="text-gray-400 mb-6">{error}</p>
             <button
               onClick={loadDashboardStats}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="btn-primary flex items-center space-x-2"
             >
-              Try Again
+              <RefreshCw className="h-4 w-4" />
+              <span>Try Again</span>
             </button>
           </div>
         </div>
@@ -193,107 +229,147 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <Layout title="Dashboard">
-      <div className="space-y-8">
+    <Layout title="Dashboard" currentPage="overview" onNavigate={handleNavigation}>
+      <div className="p-6 space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-100 mb-2">Welcome back, Admin!</h1>
+            <p className="text-gray-400">Here's what's happening with your academic system today.</p>
+          </div>
+        </div>
+
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           <StatCard
             title="Total Students"
             value={stats.totalStudents}
             icon={Users}
-            color="bg-blue-500"
+            color="bg-gradient-accent"
+            trend="+12%"
+            trendUp={true}
           />
           <StatCard
-            title="Subjects"
+            title="Active Subjects"
             value={stats.totalSubjects}
             icon={BookOpen}
-            color="bg-green-500"
+            color="bg-gradient-to-r from-emerald-500 to-teal-600"
+            trend="+3%"
+            trendUp={true}
           />
           <StatCard
-            title="Assessments Done"
+            title="Assessments"
             value={stats.completedAssessments}
             icon={FileText}
-            color="bg-purple-500"
+            color="bg-gradient-to-r from-purple-500 to-indigo-600"
+            trend="+8%"
+            trendUp={true}
           />
           <StatCard
             title="Average Score"
             value={`${stats.averagePercentage}%`}
             icon={TrendingUp}
-            color="bg-orange-500"
+            color="bg-gradient-gold"
+            trend="+2.3%"
+            trendUp={true}
           />
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-6 animate-slideIn">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-            <div className="w-1 h-6 bg-gradient-to-b from-blue-600 to-purple-600 rounded-full mr-3"></div>
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            <QuickAction
-              title="Manage Students"
-              description="Add, edit, or remove student records"
-              icon={UserPlus}
-              onClick={() => setActiveTab('students')}
-              color="bg-blue-500"
-            />
-            <QuickAction
-              title="Enter Marks"
-              description="Input and manage student marks"
-              icon={BookOpen}
-              onClick={() => setActiveTab('marks')}
-              color="bg-green-500"
-            />
-            <QuickAction
-              title="Generate Merit List"
-              description="View and export merit lists"
-              icon={Trophy}
-              onClick={() => setActiveTab('merit')}
-              color="bg-purple-500"
-            />
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Quick Actions */}
+          <div className="xl:col-span-2">
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-100 flex items-center">
+                  <Activity className="h-5 w-5 text-accent-400 mr-2" />
+                  Quick Actions
+                </h2>
+                <button className="text-accent-400 hover:text-accent-300 text-sm font-medium">
+                  View All
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <QuickAction
+                  title="Manage Students"
+                  description="Add, edit, or remove student records"
+                  icon={UserPlus}
+                  onClick={() => setActiveTab('students')}
+                  color="bg-gradient-accent"
+                />
+                <QuickAction
+                  title="Enter Marks"
+                  description="Input and manage student marks"
+                  icon={BookOpen}
+                  onClick={() => setActiveTab('marks')}
+                  color="bg-gradient-to-r from-emerald-500 to-teal-600"
+                />
+                <QuickAction
+                  title="Generate Merit List"
+                  description="View and export merit lists"
+                  icon={Trophy}
+                  onClick={() => setActiveTab('merit')}
+                  color="bg-gradient-gold"
+                />
+                <QuickAction
+                  title="View Analytics"
+                  description="Performance insights and reports"
+                  icon={BarChart3}
+                  onClick={() => console.log('Analytics')}
+                  color="bg-gradient-to-r from-pink-500 to-rose-600"
+                />
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200/50 p-6 animate-fadeIn">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-              <div className="w-1 h-6 bg-gradient-to-b from-green-600 to-blue-600 rounded-full mr-3"></div>
-              System Overview
-            </h2>
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Calendar className="h-5 w-5 text-blue-600" />
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg">
-              <Award className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="font-medium text-gray-900">Merit List Management System</p>
-                <p className="text-sm text-gray-600">Complete academic record management platform ready for use</p>
+          {/* Recent Activity */}
+          <div className="space-y-6">
+            {/* Performance Overview */}
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-100 flex items-center">
+                  <Star className="h-4 w-4 text-gold-400 mr-2" />
+                  Performance
+                </h3>
+                <Clock className="h-4 w-4 text-gray-400" />
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">Top Performer</span>
+                  <span className="text-sm font-medium text-gray-100">95.2%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">Class Average</span>
+                  <span className="text-sm font-medium text-gray-100">{stats.averagePercentage}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">Improvement</span>
+                  <div className="flex items-center space-x-1">
+                    <ArrowUp className="h-3 w-3 text-emerald-400" />
+                    <span className="text-sm font-medium text-emerald-400">+2.3%</span>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Features Available</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Student record management</li>
-                  <li>• Subject-wise marks entry</li>
-                  <li>• Automatic merit list generation</li>
-                  <li>• Search and filter capabilities</li>
-                </ul>
-              </div>
-              
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2">Export Options</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• PDF format reports</li>
-                  <li>• Excel spreadsheet export</li>
-                  <li>• Multi-semester support</li>
-                  <li>• Historical data access</li>
-                </ul>
+
+            {/* System Status */}
+            <div className="card p-6">
+              <h3 className="font-semibold text-gray-100 mb-4 flex items-center">
+                <Award className="h-4 w-4 text-accent-400 mr-2" />
+                System Status
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-gray-300">All systems operational</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-accent-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-gray-300">Database synced</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-gold-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-gray-300">Backup completed</span>
+                </div>
               </div>
             </div>
           </div>

@@ -63,7 +63,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
 
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, selectedSemester, selectedBatch, sortBy, sortOrder]);
+  }, [students, searchTerm, selectedSemester]);
 
   const loadStudents = async () => {
     try {
@@ -142,7 +142,15 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
     if (!formData.batch.trim()) {
       errors.batch = 'Batch is required';
     }
-
+    
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -151,18 +159,26 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
     e.preventDefault();
     
     if (!validateForm()) {
+      showToast({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Please fix the errors in the form before submitting.',
+      });
       return;
     }
 
-    setSaving(true);
-    
     try {
+      setSaving(true);
+      
       if (editingStudent) {
         const { error } = await supabase
           .from('students')
-          .update(formData)
+          .update({
+            ...formData,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', editingStudent.id);
-        
+
         if (error) throw error;
         
         showToast({
@@ -174,7 +190,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
         const { error } = await supabase
           .from('students')
           .insert([formData]);
-        
+
         if (error) throw error;
         
         showToast({
@@ -183,8 +199,18 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
           message: 'New student has been added successfully.',
         });
       }
-      
-      resetForm();
+
+      setFormData({
+        name: '',
+        roll_number: '',
+        email: '',
+        phone: '',
+        semester: '',
+        batch: ''
+      });
+      setFormErrors({});
+      setShowAddForm(false);
+      setEditingStudent(null);
       loadStudents();
     } catch (error) {
       console.error('Error saving student:', error);
@@ -213,9 +239,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
   };
 
   const handleDelete = async (studentId: string) => {
-    if (!confirm('Are you sure you want to delete this student?')) {
-      return;
-    }
+    if (!confirm('Are you sure you want to delete this student? This action cannot be undone.')) return;
 
     try {
       const { error } = await supabase
@@ -224,13 +248,13 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
         .eq('id', studentId);
 
       if (error) throw error;
-
+      
       showToast({
         type: 'success',
         title: 'Student Deleted',
         message: 'Student has been deleted successfully.',
       });
-
+      
       loadStudents();
     } catch (error) {
       console.error('Error deleting student:', error);
@@ -252,13 +276,11 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
       semester: '',
       batch: ''
     });
-    setFormErrors({});
     setShowAddForm(false);
     setEditingStudent(null);
   };
 
   const semesters = [...new Set(students.map(s => s.semester))].filter(Boolean);
-  const batches = [...new Set(students.map(s => s.batch))].filter(Boolean);
 
   return (
     <div className="p-6 space-y-6">
@@ -383,7 +405,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                 className="input-dark w-full"
               >
                 <option value="">All Batches</option>
-                {batches.map(batch => (
+                {[...new Set(students.map(s => s.batch))].filter(Boolean).map(batch => (
                   <option key={batch} value={batch}>{batch}</option>
                 ))}
               </select>
@@ -405,6 +427,231 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
         )}
       </div>
 
+        {/* Add/Edit Form */}
+        {showAddForm && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingStudent ? 'Edit Student' : 'Add New Student'}
+              </h2>
+              <button
+                onClick={resetForm}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.name ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {formErrors.name && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Roll Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.roll_number}
+                  onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.roll_number ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {formErrors.roll_number && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.roll_number}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.email ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {formErrors.email && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.phone ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {formErrors.phone && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Semester *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Semester 1, Semester 2"
+                  value={formData.semester}
+                  onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.semester ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {formErrors.semester && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.semester}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Batch *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., 2024-2025"
+                  value={formData.batch}
+                  onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.batch ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                />
+                {formErrors.batch && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.batch}</p>
+                )}
+              </div>
+
+              <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  <span>{saving ? 'Saving...' : (editingStudent ? 'Update' : 'Save')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Students Table */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">
+              Students ({filteredStudents.length})
+            </h3>
+          </div>
+
+          {loading ? (
+            <div className="p-6 text-center">
+              <LoadingSpinner size="lg" text="Loading students..." />
+            </div>
+          ) : error ? (
+            <div className="p-6 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Students</h3>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <button
+                onClick={loadStudents}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : filteredStudents.length === 0 ? (
+            <div className="p-6 text-center">
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500">No students found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Student Details
+                    </th>
+                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Academic Info
+                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredStudents.map((student) => (
+                    <tr key={student.id} className="hover:bg-gray-50">
+                      <td className="px-3 sm:px-6 py-4">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {student.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Roll: {student.roll_number}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell px-6 py-4">
+                        <div className="text-sm text-gray-900 truncate">{student.email || '-'}</div>
+                        <div className="text-sm text-gray-500">{student.phone || '-'}</div>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        <div className="text-sm text-gray-900">{student.semester}</div>
+                        <div className="text-sm text-gray-500">Batch: {student.batch}</div>
+                        {/* Show contact info on mobile */}
+                        <div className="sm:hidden mt-2 text-xs text-gray-500">
+                          <div>{student.email || 'No email'}</div>
+                          <div>{student.phone || 'No phone'}</div>
+                        </div>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4 text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-1 sm:space-x-2">
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-20">
@@ -431,6 +678,11 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
             <h2 className="text-lg font-semibold text-gray-100">
               Students ({filteredStudents.length})
             </h2>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-400">
+                Total: {filteredStudents.length} students
+              </span>
+            </div>
           </div>
 
           {filteredStudents.length === 0 ? (

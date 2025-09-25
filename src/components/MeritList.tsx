@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import Layout from './Layout';
 import { supabase } from '../lib/supabase';
-import { MeritListEntry, Student, Subject, Mark } from '../types';
+import { MeritListEntry } from '../types';
 import { 
   ArrowLeft, 
   Trophy, 
   Download, 
   Search, 
-  Filter,
   Medal,
   Award,
   Star
@@ -33,74 +31,52 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
   }, []);
 
   useEffect(() => {
-    filterMeritList();
+    filterList();
   }, [meritList, selectedSemester, searchTerm, minPercentage, maxPercentage]);
 
   const loadMeritList = async () => {
     try {
-      // Get all students with their marks and subjects
-      const { data: studentsData } = await supabase
+      setLoading(true);
+      
+      // Get all students with their marks
+      const { data: students, error: studentsError } = await supabase
         .from('students')
-        .select('*')
-        .order('name');
+        .select('*');
 
-      const { data: marksData } = await supabase
+      if (studentsError) throw studentsError;
+
+      const { data: marks, error: marksError } = await supabase
         .from('marks')
         .select(`
           *,
-          subjects!inner(*)
+          subject:subjects(*)
         `);
 
-      const { data: subjectsData } = await supabase
-        .from('subjects')
-        .select('*');
+      if (marksError) throw marksError;
 
-      if (!studentsData || !marksData || !subjectsData) return;
-
-      // Group marks by student and semester
-      const studentMarks: { [key: string]: { [semester: string]: Array<{ subject: Subject; marks: number }> } } = {};
-      
-      marksData.forEach(mark => {
-        if (!studentMarks[mark.student_id]) {
-          studentMarks[mark.student_id] = {};
-        }
-        if (!studentMarks[mark.student_id][mark.semester]) {
-          studentMarks[mark.student_id][mark.semester] = [];
-        }
-        studentMarks[mark.student_id][mark.semester].push({
-          subject: mark.subjects,
-          marks: mark.marks
-        });
-      });
-
-      // Create merit list entries
-      const entries: MeritListEntry[] = [];
-
-      studentsData.forEach(student => {
-        const semesterMarks = studentMarks[student.id]?.[student.semester];
-        if (!semesterMarks || semesterMarks.length === 0) return;
-
-        const totalMarks = semesterMarks.reduce((sum, item) => sum + item.marks, 0);
-        const maxMarks = semesterMarks.reduce((sum, item) => sum + item.subject.max_marks, 0);
+      // Calculate merit list
+      const meritData: MeritListEntry[] = students?.map(student => {
+        const studentMarks = marks?.filter(mark => mark.student_id === student.id) || [];
+        const totalMarks = studentMarks.reduce((sum, mark) => sum + (mark.marks || 0), 0);
+        const maxMarks = studentMarks.reduce((sum, mark) => sum + (mark.subject?.max_marks || 0), 0);
         const percentage = maxMarks > 0 ? (totalMarks / maxMarks) * 100 : 0;
 
-        entries.push({
+        return {
           student,
-          subjects: semesterMarks,
           total_marks: totalMarks,
           max_marks: maxMarks,
           percentage,
-          rank: 0 // Will be calculated after sorting
-        });
-      });
+          subjects: studentMarks.map(mark => mark.subject).filter(Boolean),
+          rank: 0 // Will be set after sorting
+        };
+      }).sort((a, b) => b.percentage - a.percentage) || [];
 
-      // Sort by percentage (descending) and assign ranks
-      entries.sort((a, b) => b.percentage - a.percentage);
-      entries.forEach((entry, index) => {
+      // Set ranks
+      meritData.forEach((entry, index) => {
         entry.rank = index + 1;
       });
 
-      setMeritList(entries);
+      setMeritList(meritData);
     } catch (error) {
       console.error('Error loading merit list:', error);
     } finally {
@@ -108,7 +84,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
     }
   };
 
-  const filterMeritList = () => {
+  const filterList = () => {
     let filtered = meritList;
 
     if (selectedSemester) {
@@ -130,65 +106,32 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
       filtered = filtered.filter(entry => entry.percentage <= parseFloat(maxPercentage));
     }
 
-    // Re-rank filtered results
-    filtered.forEach((entry, index) => {
-      entry.rank = index + 1;
-    });
-
     setFilteredList(filtered);
   };
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    
-    // Title
-    doc.setFontSize(20);
     doc.text('Merit List', 20, 20);
     
-    if (selectedSemester) {
-      doc.setFontSize(14);
-      doc.text(`Semester: ${selectedSemester}`, 20, 30);
-    }
-    
-    // Table headers
-    doc.setFontSize(10);
-    let y = selectedSemester ? 45 : 35;
-    
-    doc.text('Rank', 20, y);
-    doc.text('Name', 40, y);
-    doc.text('Roll Number', 90, y);
-    doc.text('Total', 130, y);
-    doc.text('Percentage', 160, y);
-    
-    y += 5;
-    doc.line(20, y, 190, y); // Horizontal line
-    y += 10;
-    
-    // Table data
-    filteredList.slice(0, 30).forEach((entry, index) => { // Limit to 30 entries for PDF
-      doc.text(entry.rank.toString(), 20, y);
-      doc.text(entry.student.name.substring(0, 20), 40, y);
-      doc.text(entry.student.roll_number, 90, y);
-      doc.text(`${entry.total_marks}/${entry.max_marks}`, 130, y);
-      doc.text(`${entry.percentage.toFixed(2)}%`, 160, y);
-      y += 8;
-      
-      if (y > 280) { // New page
-        doc.addPage();
-        y = 20;
-      }
+    let yPosition = 40;
+    filteredList.forEach((entry, index) => {
+      doc.text(
+        `${index + 1}. ${entry.student.name} - ${entry.percentage.toFixed(2)}%`,
+        20,
+        yPosition
+      );
+      yPosition += 10;
     });
-    
-    doc.save(`merit-list-${selectedSemester || 'all'}.pdf`);
+
+    doc.save('merit-list.pdf');
   };
 
   const exportToExcel = () => {
-    const data = filteredList.map(entry => ({
-      Rank: entry.rank,
+    const data = filteredList.map((entry, index) => ({
+      Rank: index + 1,
       Name: entry.student.name,
       'Roll Number': entry.student.roll_number,
       Semester: entry.student.semester,
-      Batch: entry.student.batch,
       'Total Marks': entry.total_marks,
       'Max Marks': entry.max_marks,
       'Percentage': entry.percentage.toFixed(2) + '%'
@@ -197,241 +140,183 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Merit List');
-    XLSX.writeFile(wb, `merit-list-${selectedSemester || 'all'}.xlsx`);
+    XLSX.writeFile(wb, 'merit-list.xlsx');
   };
 
   const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Medal className="h-5 w-5 text-yellow-500" />;
-      case 2:
-        return <Award className="h-5 w-5 text-gray-400" />;
-      case 3:
-        return <Star className="h-5 w-5 text-amber-600" />;
-      default:
-        return <span className="text-lg font-bold text-gray-600">#{rank}</span>;
-    }
-  };
-
-  const getPercentageColor = (percentage: number) => {
-    if (percentage >= 90) return 'text-green-600 bg-green-50';
-    if (percentage >= 80) return 'text-blue-600 bg-blue-50';
-    if (percentage >= 70) return 'text-yellow-600 bg-yellow-50';
-    if (percentage >= 60) return 'text-orange-600 bg-orange-50';
-    return 'text-red-600 bg-red-50';
+    if (rank === 1) return <Medal className="h-5 w-5 text-yellow-400" />;
+    if (rank === 2) return <Award className="h-5 w-5 text-gray-400" />;
+    if (rank === 3) return <Star className="h-5 w-5 text-orange-400" />;
+    return <span className="text-sm font-medium text-gray-300">#{rank}</span>;
   };
 
   const semesters = [...new Set(meritList.map(entry => entry.student.semester))];
 
   return (
-    <Layout title="Merit List">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
-            <button
-              onClick={onBack}
-              className="flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900 flex-shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="hidden sm:inline">Back to Dashboard</span>
-              <span className="sm:hidden">Back</span>
-            </button>
-            <div className="h-4 sm:h-6 border-l border-gray-300 hidden sm:block"></div>
-            <div className="flex items-center space-x-2 min-w-0">
-              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 flex-shrink-0" />
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Merit List</h1>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <button
-              onClick={exportToPDF}
-              disabled={filteredList.length === 0}
-              className="flex items-center space-x-1 sm:space-x-2 bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">PDF</span>
-            </button>
-            <button
-              onClick={exportToExcel}
-              disabled={filteredList.length === 0}
-              className="flex items-center space-x-1 sm:space-x-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Excel</span>
-            </button>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onBack}
+            className="p-2 rounded-xl hover:bg-dark-700/50 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-300" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-100 flex items-center">
+              <Trophy className="h-6 w-6 text-gold-400 mr-2" />
+              Merit List
+            </h1>
+            <p className="text-gray-400 mt-1">View and export merit rankings</p>
           </div>
         </div>
+        
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={exportToPDF}
+            disabled={filteredList.length === 0}
+            className="btn-danger flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="h-4 w-4" />
+            <span>PDF</span>
+          </button>
+          <button
+            onClick={exportToExcel}
+            disabled={filteredList.length === 0}
+            className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="h-4 w-4" />
+            <span>Excel</span>
+          </button>
+        </div>
+      </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      {/* Filters */}
+      <div className="card p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Semester</label>
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              className="input-dark w-full"
+            >
+              <option value="">All Semesters</option>
+              {semesters.map(semester => (
+                <option key={semester} value={semester}>{semester}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Search</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search students..."
+                placeholder="Search by name or roll number..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="input-dark w-full pl-10"
               />
             </div>
-            
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                value={selectedSemester}
-                onChange={(e) => setSelectedSemester(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              >
-                <option value="">All Semesters</option>
-                {semesters.map(semester => (
-                  <option key={semester} value={semester}>{semester}</option>
-                ))}
-              </select>
-            </div>
-            
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Min %</label>
             <input
               type="number"
-              placeholder="Min %"
+              placeholder="Min percentage"
               value={minPercentage}
               onChange={(e) => setMinPercentage(e.target.value)}
-              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="input-dark w-full"
             />
-            
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Max %</label>
             <input
               type="number"
-              placeholder="Max %"
+              placeholder="Max percentage"
               value={maxPercentage}
               onChange={(e) => setMaxPercentage(e.target.value)}
-              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="input-dark w-full"
             />
-            
-            <button
-              onClick={() => {
-                setSelectedSemester('');
-                setSearchTerm('');
-                setMinPercentage('');
-                setMaxPercentage('');
-              }}
-              className="w-full px-4 py-2 text-sm sm:text-base border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Clear Filters
-            </button>
           </div>
         </div>
+        
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={() => {
+              setSelectedSemester('');
+              setSearchTerm('');
+              setMinPercentage('');
+              setMaxPercentage('');
+            }}
+            className="btn-secondary"
+          >
+            Clear Filters
+          </button>
+        </div>
+      </div>
 
-        {/* Merit List Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">
-              Merit List ({filteredList.length} students)
-            </h3>
-          </div>
-
-          {loading ? (
-            <div className="p-6 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-              <p className="text-gray-500 mt-2">Loading merit list...</p>
-            </div>
-          ) : filteredList.length === 0 ? (
-            <div className="p-6 text-center">
-              <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500">No results found</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Rank
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Student Details
-                    </th>
-                    <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Academic Info
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Marks
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Percentage
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredList.map((entry) => (
-                    <tr key={entry.student.id} className="hover:bg-gray-50">
-                      <td className="px-3 sm:px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          {getRankIcon(entry.rank)}
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-4">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 truncate">
-                            {entry.student.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Roll: {entry.student.roll_number}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="hidden sm:table-cell px-6 py-4">
-                        <div className="text-sm text-gray-900">{entry.student.semester}</div>
-                        <div className="text-sm text-gray-500">Batch: {entry.student.batch}</div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {entry.total_marks} / {entry.max_marks}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {entry.subjects.length} subjects
-                        </div>
-                        {/* Show academic info on mobile */}
-                        <div className="sm:hidden mt-2 text-xs text-gray-500">
-                          <div>{entry.student.semester}</div>
-                          <div>Batch: {entry.student.batch}</div>
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-4">
-                        <span className={`inline-flex px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getPercentageColor(entry.percentage)}`}>
-                          {entry.percentage.toFixed(2)}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+      {/* Merit List */}
+      <div className="card overflow-hidden">
+        <div className="px-6 py-4 border-b border-dark-600">
+          <h3 className="text-lg font-semibold text-gray-100">
+            Merit List ({filteredList.length} students)
+          </h3>
         </div>
 
-        {/* Top Performers */}
-        {filteredList.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Top Performers</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredList.slice(0, 3).map((entry, index) => (
-                <div
-                  key={entry.student.id}
-                  className={`p-4 rounded-lg border-2 ${
-                    index === 0 ? 'border-yellow-300 bg-yellow-50' :
-                    index === 1 ? 'border-gray-300 bg-gray-50' :
-                    'border-amber-300 bg-amber-50'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3 mb-2">
-                    {getRankIcon(entry.rank)}
-                    <div className="font-medium text-gray-900">{entry.student.name}</div>
+        {loading ? (
+          <div className="p-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500 mx-auto"></div>
+            <p className="text-gray-400 mt-2">Loading merit list...</p>
+          </div>
+        ) : filteredList.length === 0 ? (
+          <div className="p-6 text-center">
+            <Trophy className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+            <p className="text-gray-400">No students found matching the criteria.</p>
+          </div>
+        ) : (
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredList.map((entry, index) => (
+                <div key={entry.student.id} className="card-hover p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-glow ${
+                        index === 0 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                        index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-500' :
+                        index === 2 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
+                        'bg-gradient-accent'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-100">{entry.student.name}</h4>
+                        <p className="text-sm text-gray-400">Semester {entry.student.semester}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      {index === 0 && <Medal className="h-5 w-5 text-yellow-400" />}
+                      {index === 1 && <Award className="h-5 w-5 text-gray-400" />}
+                      {index === 2 && <Star className="h-5 w-5 text-orange-400" />}
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    <p>Roll: {entry.student.roll_number}</p>
-                    <p>Marks: {entry.total_marks}/{entry.max_marks}</p>
-                    <p className="font-medium">{entry.percentage.toFixed(2)}%</p>
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-3 ${
+                    entry.percentage >= 90 ? 'bg-emerald-500/20 text-emerald-400' :
+                    entry.percentage >= 80 ? 'bg-accent-500/20 text-accent-400' :
+                    entry.percentage >= 70 ? 'bg-yellow-500/20 text-yellow-400' :
+                    entry.percentage >= 60 ? 'bg-orange-500/20 text-orange-400' :
+                    'bg-red-500/20 text-red-400'
+                  }`}>
+                    {entry.percentage.toFixed(2)}%
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-400">Roll: <span className="text-gray-300">{entry.student.roll_number}</span></p>
+                    <p className="text-sm text-gray-400">Marks: <span className="text-gray-300">{entry.total_marks}/{entry.max_marks}</span></p>
                   </div>
                 </div>
               ))}
@@ -439,7 +324,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 };
 
