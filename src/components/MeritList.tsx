@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { db } from "../firebase";
+import { collection, getDocs } from "firebase/firestore";
 import { MeritListEntry } from '../types';
-import { 
-  ArrowLeft, 
-  Trophy, 
-  Download, 
+import {
+  ArrowLeft,
+  Trophy,
+  Download,
   Medal,
   Award,
   Star
@@ -36,22 +37,28 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
   const loadMeritList = async () => {
     try {
       setLoading(true);
-      
-      // Get all students with their marks
-      const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select('*');
 
-      if (studentsError) throw studentsError;
+      // Get all students
+      const studentsSnapshot = await getDocs(collection(db, "students"));
+      const students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
 
-      const { data: marks, error: marksError } = await supabase
-        .from('marks')
-        .select(`
-          *,
-          subject:subjects(*)
-        `);
+      // Get all subjects
+      const subjectsSnapshot = await getDocs(collection(db, "subjects"));
+      const subjectsDict: { [key: string]: any } = {};
+      subjectsSnapshot.docs.forEach(doc => {
+        subjectsDict[doc.id] = { id: doc.id, ...doc.data() };
+      });
 
-      if (marksError) throw marksError;
+      // Get all marks
+      const marksSnapshot = await getDocs(collection(db, "marks"));
+      const marks = marksSnapshot.docs.map(doc => {
+        const markData = doc.data() as any;
+        return {
+          id: doc.id,
+          ...markData,
+          subject: subjectsDict[markData.subject_id] || null
+        };
+      });
 
       // Calculate merit list
       const meritData: MeritListEntry[] = students?.map(student => {
@@ -111,7 +118,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text('Merit List', 20, 20);
-    
+
     let yPosition = 40;
     filteredList.forEach((entry, index) => {
       doc.text(
@@ -164,7 +171,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
             <p className="text-gray-400 mt-1">View and export merit rankings</p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <button
             onClick={exportToPDF}
@@ -201,7 +208,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               ))}
             </select>
           </div>
-          
+
           <div className="min-w-0 sm:col-span-2 lg:col-span-1">
             <label className="block text-sm font-medium text-gray-300 mb-2">Search</label>
             <input
@@ -212,7 +219,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               className="input-dark w-full"
             />
           </div>
-          
+
           <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-300 mb-2">Min %</label>
             <input
@@ -225,7 +232,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
               max="100"
             />
           </div>
-          
+
           <div className="min-w-0">
             <label className="block text-sm font-medium text-gray-300 mb-2">Max %</label>
             <input
@@ -239,7 +246,7 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
             />
           </div>
         </div>
-        
+
         <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div className="text-sm text-gray-400">
             Showing {filteredList.length} of {meritList.length} students
@@ -283,12 +290,11 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
                 <div key={entry.student.id} className="card-hover p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-glow ${
-                        index === 0 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-glow ${index === 0 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
                         index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-500' :
-                        index === 2 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
-                        'bg-gradient-accent'
-                      }`}>
+                          index === 2 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
+                            'bg-gradient-accent'
+                        }`}>
                         {index + 1}
                       </div>
                       <div>
@@ -302,13 +308,12 @@ const MeritList: React.FC<MeritListProps> = ({ onBack }) => {
                       {index === 2 && <Star className="h-5 w-5 text-orange-400" />}
                     </div>
                   </div>
-                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-3 ${
-                    entry.percentage >= 90 ? 'bg-emerald-500/20 text-emerald-400' :
+                  <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-3 ${entry.percentage >= 90 ? 'bg-emerald-500/20 text-emerald-400' :
                     entry.percentage >= 80 ? 'bg-accent-500/20 text-accent-400' :
-                    entry.percentage >= 70 ? 'bg-yellow-500/20 text-yellow-400' :
-                    entry.percentage >= 60 ? 'bg-orange-500/20 text-orange-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
+                      entry.percentage >= 70 ? 'bg-yellow-500/20 text-yellow-400' :
+                        entry.percentage >= 60 ? 'bg-orange-500/20 text-orange-400' :
+                          'bg-red-500/20 text-red-400'
+                    }`}>
                     {entry.percentage.toFixed(2)}%
                   </div>
                   <div className="space-y-1">

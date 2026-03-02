@@ -1,8 +1,8 @@
 # 🎓 Merit List Management System
 
-A modern, responsive web application for managing student records, marks entry, and generating merit lists. Built with React, TypeScript, Vite, and Supabase.
+A modern, responsive web application for managing student records, marks entry, and generating merit lists. Built with React, TypeScript, Vite, and Firebase.
 
-![Merit List System](https://img.shields.io/badge/React-18.3.1-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-blue) ![Vite](https://img.shields.io/badge/Vite-5.4.2-purple) ![Supabase](https://img.shields.io/badge/Supabase-2.57.4-green) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4.1-blue)
+![Merit List System](https://img.shields.io/badge/React-18.3.1-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-blue) ![Vite](https://img.shields.io/badge/Vite-5.4.2-purple) ![Firebase](https://img.shields.io/badge/Firebase-12.9.0-yellow) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4.1-blue)
 
 ## ✨ Features
 
@@ -25,7 +25,7 @@ A modern, responsive web application for managing student records, marks entry, 
 - **TypeScript**: Full type safety and better development experience
 - **React Router**: Client-side routing for seamless navigation
 - **Vite**: Fast build tool and development server
-- **Supabase Integration**: Real-time database with authentication
+- **Firebase Integration**: Real-time Firestore database with Firebase Authentication
 - **Error Boundaries**: React error boundaries for better error handling
 - **Custom Hooks**: Reusable logic for authentication and data management
 - **Toast Notifications**: Real-time user feedback system
@@ -36,7 +36,7 @@ A modern, responsive web application for managing student records, marks entry, 
 ### Prerequisites
 - Node.js (v16 or higher)
 - npm or yarn
-- Supabase account
+- Firebase account
 
 ### Installation
 
@@ -54,26 +54,22 @@ A modern, responsive web application for managing student records, marks entry, 
    ```
 
 3. **Set up environment variables**
-   Create a `.env.local` file in the root directory:
+   Create a `.env` file in the root directory:
    ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_FIREBASE_API_KEY=your_api_key
+   VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+   VITE_FIREBASE_PROJECT_ID=your_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+   VITE_FIREBASE_APP_ID=your_app_id
    ```
 
-4. **Set up Supabase database**
-   Run the SQL migrations in the `supabase/migrations/` directory:
-   ```sql
-   -- Migration 1: Create tables and RLS policies
-   -- Migration 2: Insert sample data for testing
-   -- Migration 3: Admin user setup instructions
-   ```
-   
-   The migrations will create:
-   - `students` table with RLS policies
-   - `subjects` table with RLS policies  
-   - `marks` table with RLS policies
-   - Sample data for testing (10 students, 10 subjects, random marks)
-   - Performance indexes for optimal query performance
+4. **Set up Firebase database**
+   - Create a new Firebase project
+   - Enable Firestore Database
+   - Enable Authentication (Email/Password)
+   - Add a web app and copy the config to your `.env` file
+   - Set up Firestore Rules appropriate for your use case
 
 5. **Start the development server**
    ```bash
@@ -88,69 +84,54 @@ A modern, responsive web application for managing student records, marks entry, 
    **Default Admin Credentials:**
    - Email: `admin@merit.com`
    - Password: `admin123`
-
-## 📊 Sample Data
-
-The application comes with pre-loaded sample data for testing:
-
-- **10 Students** across 2 semesters (5 per semester)
-- **10 Subjects** (5 per semester)
-- **Random Marks** (60-98 range) for all student-subject combinations
-- **Two Batches**: 2024-2025 and 2023-2024
-
-This allows you to immediately test all features without manual data entry.
+   *(Make sure to register this account in your Firebase Authentication console first)*
 
 ## 🗄️ Database Schema
 
-### Tables
+### Collections
 
 #### `students`
-- `id` (uuid, primary key)
-- `name` (text, required)
-- `roll_number` (text, required, unique)
-- `email` (text, optional)
-- `phone` (text, optional)
-- `semester` (text, required)
-- `batch` (text, required)
-- `created_at` (timestamp)
-- `updated_at` (timestamp)
+- `name` (string, required)
+- `roll_number` (string, required, unique)
+- `email` (string, optional)
+- `phone` (string, optional)
+- `semester` (string, required)
+- `batch` (string, required)
+- `created_at` (iso string)
+- `updated_at` (iso string)
 
 #### `subjects`
-- `id` (uuid, primary key)
-- `name` (text, required)
-- `code` (text, required)
-- `max_marks` (integer, required)
-- `semester` (text, required)
-- `created_at` (timestamp)
+- `name` (string, required)
+- `code` (string, required)
+- `max_marks` (number, required)
+- `semester` (string, required)
+- `created_at` (iso string)
 
 #### `marks`
-- `id` (uuid, primary key)
-- `student_id` (uuid, foreign key)
-- `subject_id` (uuid, foreign key)
-- `marks` (integer, required)
-- `semester` (text, required)
-- `created_at` (timestamp)
+- `student_id` (string, reference)
+- `subject_id` (string, reference)
+- `marks` (number, required)
+- `semester` (string, required)
+- `created_at` (iso string)
 
 ## 🔐 Authentication
 
-The system uses Supabase Auth for authentication. The database migrations automatically set up Row Level Security (RLS) policies.
+The system uses Firebase Authentication.
 
 ### Admin User Setup
 
-1. **Create an admin user** in Supabase Dashboard:
+1. **Create an admin user** in Firebase Console:
    - Go to Authentication → Users
-   - Click "Create New User"
+   - Click "Add User"
    - Use email: `admin@merit.com` and password: `admin123`
 
-2. **RLS Policies** are automatically created by the migrations:
-   - All tables have RLS enabled
-   - Authenticated users can perform all CRUD operations
-   - Policies are set for `students`, `subjects`, and `marks` tables
+2. **Database Security**
+   - Set up Firestore Security Rules to protect your collections.
 
 ## 📱 Usage Guide
 
 ### 1. Login
-- Use the admin credentials created in Supabase
+- Use the admin credentials created in Firebase
 - Default: `admin@merit.com` / `admin123`
 
 ### 2. Student Management
@@ -192,18 +173,12 @@ merit-list-management-system/
 │   │   └── LoadingSpinner.tsx
 │   ├── contexts/            # React contexts
 │   │   └── AuthContext.tsx  # Authentication context
-│   ├── lib/                 # Utilities
-│   │   └── supabase.ts      # Supabase client
 │   ├── types/               # TypeScript types
 │   │   └── index.ts
+│   ├── firebase.ts          # Firebase config
 │   ├── App.tsx              # Main app component
 │   ├── main.tsx             # Application entry point
 │   └── index.css            # Global styles
-├── supabase/
-│   └── migrations/          # Database migrations
-│       ├── 20250913164239_dawn_fire.sql    # Tables & RLS
-│       ├── 20250913164251_mellow_tree.sql  # Sample data
-│       └── 20250913164457_raspy_paper.sql  # Admin setup
 ├── public/                  # Static assets
 ├── package.json
 ├── vite.config.ts
@@ -230,7 +205,7 @@ npm run lint         # Run ESLint
 - **React 18.3.1**: UI library
 - **TypeScript 5.5.3**: Type safety
 - **Vite 5.4.2**: Build tool and dev server
-- **Supabase 2.57.4**: Backend and authentication
+- **Firebase 12.9.0**: Backend and authentication
 - **React Router 7.9.1**: Client-side routing
 - **Tailwind CSS 3.4.1**: Styling
 - **Lucide React 0.544.0**: Icons
@@ -250,34 +225,25 @@ The app uses Tailwind CSS with custom animations and components. Key customizati
 ### Adding New Features
 1. Create new components in `src/components/`
 2. Add types in `src/types/index.ts`
-3. Update the database schema if needed (create new migration)
+3. Update the database schema if needed
 4. Add new routes in `App.tsx`
-5. Update the Supabase client if new tables are added
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Supabase Connection Error**
+1. **Firebase Connection Error**
    - Check your environment variables
-   - Verify Supabase URL and API key
-   - Ensure RLS policies are set up correctly
+   - Verify Firebase API key and config matches
 
 2. **Authentication Issues**
-   - Verify admin user exists in Supabase
-   - Check email confirmation if required
+   - Verify admin user exists in Firebase
    - Clear browser cache and cookies
-
-3. **Database Errors**
-   - Run all migration files in order (dawn_fire → mellow_tree → raspy_paper)
-   - Check table permissions and RLS policies
-   - Verify foreign key relationships
-   - Ensure sample data was inserted correctly
 
 ### Getting Help
 
 - Check the browser console for error messages
-- Verify Supabase logs in the dashboard
+- Verify Firebase logs in the dashboard
 - Ensure all environment variables are set correctly
 
 ## 📄 License
@@ -297,8 +263,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For support and questions:
 - Create an issue in the repository
 - Check the troubleshooting section
-- Review Supabase documentation
+- Review Firebase documentation
 
 ---
 
-**Built with ❤️ using React, TypeScript, Vite, and Supabase**
+**Built with ❤️ using React, TypeScript, Vite, and Firebase**

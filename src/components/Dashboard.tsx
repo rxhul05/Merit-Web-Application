@@ -4,12 +4,13 @@ import StudentManagement from './StudentManagement';
 import MarksEntry from './MarksEntry';
 import MeritList from './MeritList';
 import LoadingSpinner from './LoadingSpinner';
-import { supabase } from '../lib/supabase';
+import { db } from "../firebase";
+import { collection, getDocs } from "firebase/firestore";
 import { useToast } from './Toast';
-import { 
-  Users, 
-  BookOpen, 
-  Trophy, 
+import {
+  Users,
+  BookOpen,
+  Trophy,
   TrendingUp,
   UserPlus,
   FileText,
@@ -55,51 +56,44 @@ const Dashboard: React.FC = () => {
       setError(null);
 
       // Get total students
-      const { count: studentsCount, error: studentsError } = await supabase
-        .from('students')
-        .select('*', { count: 'exact', head: true });
-
-      if (studentsError) throw studentsError;
+      const studentsSnapshot = await getDocs(collection(db, "students"));
+      const studentsCount = studentsSnapshot.docs.length;
 
       // Get total subjects
-      const { count: subjectsCount, error: subjectsError } = await supabase
-        .from('subjects')
-        .select('*', { count: 'exact', head: true });
+      const subjectsSnapshot = await getDocs(collection(db, "subjects"));
+      const subjectsCount = subjectsSnapshot.docs.length;
 
-      if (subjectsError) throw subjectsError;
+      const marksSnapshot = await getDocs(collection(db, "marks"));
+      const marksData = marksSnapshot.docs.map(doc => doc.data());
 
       // Get completed assessments (students with marks)
-      const { data: marksData, error: marksError } = await supabase
-        .from('marks')
-        //@ts-ignore
-        .select('student_id', { distinct: true });
+      const uniqueStudentIds = new Set(marksData.map(mark => mark.student_id));
+      const completedAssessments = uniqueStudentIds.size;
 
-      if (marksError) throw marksError;
+      // Get subjects to check max marks
+      const subjectsDict: { [key: string]: number } = {};
+      subjectsSnapshot.docs.forEach(doc => {
+        subjectsDict[doc.id] = doc.data().max_marks || 100;
+      });
 
       // Calculate average percentage
-      const { data: allMarks, error: allMarksError } = await supabase
-        .from('marks')
-        .select(`
-          marks,
-          subjects!inner(max_marks)
-        `);
-
-      if (allMarksError) throw allMarksError;
-
       let totalPercentage = 0;
-      if (allMarks && allMarks.length > 0) {
-        allMarks.forEach(mark => {
-          //@ts-ignore
-          const percentage = (mark.marks / mark.subjects.max_marks) * 100;
+      if (marksData && marksData.length > 0) {
+        marksData.forEach(mark => {
+          let maxMarks = 100;
+          if (mark.subject_id && subjectsDict[mark.subject_id]) {
+            maxMarks = subjectsDict[mark.subject_id];
+          }
+          const percentage = ((mark.marks || 0) / maxMarks) * 100;
           totalPercentage += percentage;
         });
-        totalPercentage = totalPercentage / allMarks.length;
+        totalPercentage = totalPercentage / marksData.length;
       }
 
       setStats({
         totalStudents: studentsCount || 0,
         totalSubjects: subjectsCount || 0,
-        completedAssessments: marksData?.length || 0,
+        completedAssessments: completedAssessments || 0,
         averagePercentage: Math.round(totalPercentage * 100) / 100
       });
     } catch (error) {
@@ -130,9 +124,8 @@ const Dashboard: React.FC = () => {
           <Icon className="h-6 w-6 text-white" />
         </div>
         {trend && (
-          <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-medium ${
-            trendUp ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-          }`}>
+          <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-medium ${trendUp ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+            }`}>
             {trendUp ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
             <span>{trend}</span>
           </div>

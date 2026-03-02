@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
-import { supabase } from '../lib/supabase';
+import { db } from "../firebase";
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy } from "firebase/firestore";
 import { Student } from '../types';
 import { useToast } from './Toast';
-import { 
-  ArrowLeft, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Save, 
+import {
+  ArrowLeft,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
   X,
   Filter,
   Users,
@@ -68,14 +69,12 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setStudents(data || []);
+      const q = query(collection(db, 'students'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[];
+
+      setStudents(data);
     } catch (error) {
       console.error('Error loading students:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load students';
@@ -112,7 +111,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
     filtered.sort((a, b) => {
       let aValue = a[sortBy];
       let bValue = b[sortBy];
-      
+
       if (sortOrder === 'asc') {
         return aValue.localeCompare(bValue);
       } else {
@@ -125,19 +124,19 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
 
   const validateForm = () => {
     const errors: { [key: string]: string } = {};
-    
+
     if (!formData.name.trim()) {
       errors.name = 'Name is required';
     }
-    
+
     if (!formData.roll_number.trim()) {
       errors.roll_number = 'Roll number is required';
     }
-    
+
     if (!formData.semester.trim()) {
       errors.semester = 'Semester is required';
     }
-    
+
     if (!formData.batch.trim()) {
       errors.batch = 'Batch is required';
     }
@@ -148,41 +147,33 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setSaving(true);
-    
+
     try {
       if (editingStudent) {
-        const { error } = await supabase
-          .from('students')
-          .update(formData)
-          .eq('id', editingStudent.id);
-        
-        if (error) throw error;
-        
+        const studentRef = doc(db, 'students', editingStudent.id);
+        await updateDoc(studentRef, { ...formData, updated_at: new Date().toISOString() });
+
         showToast({
           type: 'success',
           title: 'Student Updated',
           message: 'Student information has been updated successfully.',
         });
       } else {
-        const { error } = await supabase
-          .from('students')
-          .insert([formData]);
-        
-        if (error) throw error;
-        
+        await addDoc(collection(db, 'students'), { ...formData, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+
         showToast({
           type: 'success',
           title: 'Student Added',
           message: 'New student has been added successfully.',
         });
       }
-      
+
       resetForm();
       loadStudents();
     } catch (error) {
@@ -217,12 +208,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
     }
 
     try {
-      const { error } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', studentId);
-
-      if (error) throw error;
+      await deleteDoc(doc(db, 'students', studentId));
 
       showToast({
         type: 'success',
@@ -278,41 +264,39 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
             <p className="text-gray-400 mt-1">Manage student records and information</p>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <div className="flex items-center bg-dark-800/50 border border-dark-600 rounded-xl p-1">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-colors ${
-                viewMode === 'grid' 
-                  ? 'bg-accent-500 text-white shadow-glow' 
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid'
+                  ? 'bg-accent-500 text-white shadow-glow'
                   : 'text-gray-400 hover:text-gray-200'
-              }`}
+                }`}
             >
               <Grid className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg transition-colors ${
-                viewMode === 'list' 
-                  ? 'bg-accent-500 text-white shadow-glow' 
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'list'
+                  ? 'bg-accent-500 text-white shadow-glow'
                   : 'text-gray-400 hover:text-gray-200'
-              }`}
+                }`}
             >
               <List className="h-4 w-4" />
             </button>
           </div>
-          
+
           <button className="btn-secondary flex items-center space-x-2">
             <Upload className="h-4 w-4" />
             <span>Import</span>
           </button>
-          
+
           <button className="btn-secondary flex items-center space-x-2">
             <Download className="h-4 w-4" />
             <span>Export</span>
           </button>
-          
+
           <button
             onClick={() => setShowAddForm(true)}
             className="btn-primary flex items-center space-x-2"
@@ -335,7 +319,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
               className="input-dark w-full"
             />
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -344,7 +328,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
               <Filter className="h-4 w-4" />
               <span>Filters</span>
             </button>
-            
+
             <div className="flex items-center bg-dark-800/50 border border-dark-600 rounded-xl p-1">
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
@@ -356,7 +340,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
             </div>
           </div>
         </div>
-        
+
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-dark-600 overflow-hidden">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -373,7 +357,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                   ))}
                 </select>
               </div>
-              
+
               <div className="min-w-0">
                 <label className="block text-sm font-medium text-gray-300 mb-2">Batch</label>
                 <select
@@ -387,7 +371,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
                   ))}
                 </select>
               </div>
-              
+
               <div className="min-w-0 sm:col-span-2 lg:col-span-1">
                 <label className="block text-sm font-medium text-gray-300 mb-2">Sort By</label>
                 <select
@@ -535,7 +519,7 @@ const StudentManagement: React.FC<StudentManagementProps> = ({ onBack }) => {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 transition-opacity bg-dark-900/80 backdrop-blur-sm" onClick={resetForm}></div>
-            
+
             <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform card shadow-dark-xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-100">

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { auth } from "../firebase";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { AdminUser } from '../types';
 import { useToast } from '../components/Toast';
 
@@ -26,58 +27,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { showToast } = useToast();
 
   useEffect(() => {
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
         setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata.name || session.user.email || '',
+          id: currentUser.uid,
+          email: currentUser.email || "",
+          name: currentUser.displayName || currentUser.email || "",
         });
+      } else {
+        setUser(null);
       }
       setLoading(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata.name || session.user.email || '',
-          });
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Login error:', error);
-        showToast({
-          type: 'error',
-          title: 'Login Failed',
-          message: error.message || 'Invalid email or password. Please try again.',
-        });
-        return false;
-      }
-
-      if (data.user) {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      if (userCredential.user) {
         setUser({
-          id: data.user.id,
-          email: data.user.email || '',
-          name: data.user.user_metadata.name || data.user.email || '',
+          id: userCredential.user.uid,
+          email: userCredential.user.email || '',
+          name: userCredential.user.displayName || userCredential.user.email || '',
         });
         showToast({
           type: 'success',
@@ -92,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       showToast({
         type: 'error',
         title: 'Login Error',
-        message: 'An unexpected error occurred. Please try again.',
+        message: 'Invalid email or password. Please try again.',
       });
       return false;
     }
@@ -100,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async (): Promise<void> => {
     try {
-      await supabase.auth.signOut();
+      await signOut(auth);
       setUser(null);
       showToast({
         type: 'info',
@@ -119,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

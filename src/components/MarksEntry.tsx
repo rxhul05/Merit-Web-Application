@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { db } from "../firebase";
+import { collection, addDoc, getDocs, doc, setDoc } from "firebase/firestore";
 import { Student, Subject } from '../types';
 import { 
   ArrowLeft, 
@@ -34,13 +35,14 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
 
   const loadData = async () => {
     try {
-      const [studentsResult, subjectsResult] = await Promise.all([
-        supabase.from('students').select('*').order('name'),
-        supabase.from('subjects').select('*').order('name')
-      ]);
+      const studentsSnapshot = await getDocs(collection(db, "students"));
+      const subjectsSnapshot = await getDocs(collection(db, "subjects"));
 
-      setStudents(studentsResult.data || []);
-      setSubjects(subjectsResult.data || []);
+      const studentsData = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Student[];
+      const subjectsData = subjectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Subject[];
+
+      setStudents(studentsData);
+      setSubjects(subjectsData);
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -49,11 +51,7 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
   const handleSubjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { error } = await supabase
-        .from('subjects')
-        .insert([subjectForm]);
-      
-      if (error) throw error;
+      await addDoc(collection(db, "subjects"), subjectForm);
       
       setShowSubjectForm(false);
       setSubjectForm({ name: '', code: '', max_marks: 100, semester: '' });
@@ -68,17 +66,18 @@ const MarksEntry: React.FC<MarksEntryProps> = ({ onBack }) => {
     if (!selectedStudent) return;
 
     try {
-      const marksToInsert = Object.entries(marksData).map(([subjectId, marks]) => ({
-        student_id: selectedStudent.id,
-        subject_id: subjectId,
-        marks: marks
-      }));
+      const promises = Object.entries(marksData).map(([subjectId, marks]) => {
+        const markRef = doc(db, 'marks', `${selectedStudent.id}_${subjectId}`);
+        return setDoc(markRef, {
+          student_id: selectedStudent.id,
+          subject_id: subjectId,
+          marks: marks,
+          semester: selectedStudent.semester,
+          created_at: new Date().toISOString()
+        }, { merge: true });
+      });
 
-      const { error } = await supabase
-        .from('marks')
-        .upsert(marksToInsert);
-
-      if (error) throw error;
+      await Promise.all(promises);
 
       setSelectedStudent(null);
       setMarksData({});
